@@ -1,0 +1,17 @@
+name: justplay_workspace
+description: JustPlay monorepo — shared framework and casual game apps for Android and iOS.
+publish_to: none
+
+environment:
+  sdk: ^3.12.0
+
+# Dart pub workspaces (3.6+) rather than Melos for dependency resolution. One shared lock file and
+# one `dart pub get` for every package, with no extra tooling to install or keep current. Melos is
+# still worth adding later for repo-wide task running and versioning, but it is not needed to
+# resolve dependencies.
+workspace:
+  - packages/jp_core
+  - packages/jp_framework
+  - packages/jp_ui
+  - packages/jp_games
+  - apps/timekiller

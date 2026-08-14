@@ -1,0 +1,35 @@
+# Dart / Flutter
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# pubspec.lock IS committed. This is an application monorepo, not a published
+# library: a reproducible dependency set is the point, and an unlocked transitive
+# bump is exactly the kind of thing that breaks a build nobody touched.
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Android — signing material must never be committed. A leaked upload key means
+# anyone can publish as this account. Play App Signing makes a lost upload key
+# recoverable through support; a *published* one is not.
+**/android/key.properties
+**/*.keystore
+**/*.jks
+
+# Firebase / service configuration, once it lands. These carry project
+# identifiers and API keys; they belong in CI secrets, not history.
+**/google-services.json
+**/GoogleService-Info.plist
+firebase_options.dart
+
+# Golden test output. Failure images are diagnostics, not artefacts.
+**/test/**/failures/

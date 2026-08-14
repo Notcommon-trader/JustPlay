@@ -1,0 +1,24 @@
+# Repo-wide static analysis. Applies to every package in the workspace.
+include: package:lints/recommended.yaml
+
+analyzer:
+  language:
+    strict-casts: true
+    strict-raw-types: true
+  errors:
+    # Unawaited futures are a real bug source in ad, purchase and sync code, where
+    # a dropped future silently means "the thing never happened". Error, not hint.
+    unawaited_futures: error
+
+linter:
+  rules:
+    - always_declare_return_types
+    - avoid_print
+    - prefer_final_locals
+    - prefer_const_constructors
+    - prefer_const_declarations
+    - unnecessary_parenthesis
+    - use_super_parameters
+    # Immutability is load-bearing here: game state is copied for undo, replay and
+    # save/restore, so a stray mutable field breaks all three at once.
+    - prefer_final_fields

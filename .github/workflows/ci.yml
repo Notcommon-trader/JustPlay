@@ -1,0 +1,103 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Pinned, not "stable". An unpinned channel means a Flutter release can turn a
+  # green branch red overnight with no change of ours — and golden images are
+  # sensitive to font and rendering changes across versions.
+  FLUTTER_VERSION: 3.44.9
+
+jobs:
+  test:
+    # Windows, deliberately. The golden images in this repo were generated on
+    # Windows, and text rendering differs enough between platforms that a Linux
+    # runner fails every golden on a repo where nothing is wrong. Regenerating
+    # them for Linux would just move the problem to every developer's machine.
+    # See docs/TESTING.md, "Platform sensitivity".
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      # One resolve for the whole workspace: pub workspaces share a single lock
+      # file, so a per-package `pub get` would be repeated work.
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: dart analyze --fatal-infos
+
+      - name: Test jp_core
+        run: dart test
+        working-directory: packages/jp_core
+
+      - name: Test jp_framework
+        run: flutter test
+        working-directory: packages/jp_framework
+
+      - name: Test jp_ui
+        run: flutter test
+        working-directory: packages/jp_ui
+
+      - name: Test jp_games
+        run: flutter test
+        working-directory: packages/jp_games
+
+      - name: Test timekiller
+        run: flutter test
+        working-directory: apps/timekiller
+
+      # Goldens fail as an image diff with no detail in the log. Uploading the
+      # failures directory is the difference between "a golden broke" and being
+      # able to see what it now looks like.
+      - name: Upload golden failures
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-failures
+          path: |
+            packages/**/test/**/failures/**
+            apps/**/test/**/failures/**
+          if-no-files-found: ignore
+
+  android:
+    # A separate job because it catches a different class of break: a plugin that
+    # does not resolve, a Gradle or AGP bump, a manifest or minSdk problem. None
+    # of that shows up in `flutter test`, and all of it blocks a release.
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Build debug APK
+        run: flutter build apk --debug
+        working-directory: apps/timekiller
