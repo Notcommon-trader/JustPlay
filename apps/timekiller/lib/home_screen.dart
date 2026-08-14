@@ -153,7 +153,10 @@ class _GameCardState extends State<_GameCard> {
               child: Container(
                 padding: const EdgeInsets.all(JpSpace.lg),
                 decoration: BoxDecoration(
-                  color: scheme.surfaceContainerLow,
+                  // High, not Low. On a phone the cards were a single tone off
+                  // the page and the list read as unseparated text — the first
+                  // screen anyone sees, looking like nothing had been designed.
+                  color: scheme.surfaceContainerHigh,
                   borderRadius: JpRadius.md,
                   boxShadow: JpElevation.low(scheme.shadow),
                 ),

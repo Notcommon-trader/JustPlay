@@ -151,7 +151,11 @@ class _Board2048ViewState extends State<Board2048View> {
 
                   return DecoratedBox(
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surfaceContainerLow,
+                      // surfaceContainerHighest, matching every other board in
+                      // the catalogue. This one was surfaceContainerLow — a tone
+                      // away from the page behind it, so on a phone the board had
+                      // no edge and the grid appeared to float on the background.
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
                       borderRadius: JpRadius.md,
                     ),
                     child: Padding(

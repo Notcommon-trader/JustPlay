@@ -13,8 +13,10 @@ import 'package:flutter/material.dart';
 abstract final class TilePalette {
   static Color background(ColorScheme scheme, int value) {
     if (value == 0) {
-      // Empty cell: a recess in the board, not a tile.
-      return scheme.onSurface.withValues(alpha: 0.06);
+      // Empty cell: a recess in the board, not a tile. The alpha was 0.06 and
+      // the recess was invisible on a real screen — deep enough to see, still
+      // shallow enough that empty squares never compete with occupied ones.
+      return scheme.onSurface.withValues(alpha: 0.10);
     }
 
     // Tiles double, so the exponent is the natural scale. 2 -> 1, 4 -> 2 …
