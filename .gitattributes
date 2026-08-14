@@ -1,0 +1,26 @@
+# Normalise line endings in history to LF, whatever the working copy uses.
+#
+# Without this, a repo edited on Windows and built on a Linux CI runner stores
+# CRLF for some files and LF for others depending on who touched them last, and
+# diffs start showing whole files as changed when nothing was.
+* text=auto eol=lf
+
+# Binary. Golden images especially: line-ending translation would corrupt them,
+# and a "diff" of a PNG is noise in a review either way.
+*.png binary
+*.jpg binary
+*.ico binary
+*.ttf binary
+*.otf binary
+*.jks binary
+*.keystore binary
+
+# Windows scripts need CRLF to run — the Gradle wrapper is the one that matters.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Generated. Marking these keeps them out of diff review and out of language
+# statistics without excluding them from the build.
+pubspec.lock linguist-generated=true
+**/generated_plugin_registrant.* linguist-generated=true
+**/generated_plugins.cmake linguist-generated=true
