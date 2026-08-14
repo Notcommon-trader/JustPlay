@@ -33,6 +33,18 @@ abstract final class JpTheme {
       // This is visible in test/golden/goldens/buttons_light.png: the primary
       // button was grey-blue before this line existed.
       dynamicSchemeVariant: DynamicSchemeVariant.vibrant,
+
+      // Raised from the 0.0 default after seeing the app on a real Android
+      // screen for the first time. `vibrant` fixes the *hue*, but M3's light
+      // surface tones are packed into the top few percent of the lightness
+      // range: surface, surfaceContainer and surfaceContainerHighest all came
+      // back within a hair of white, so a 2048 board, its empty cells and the
+      // page behind them were one flat field. Goldens did not catch it because
+      // the difference is there in the pixels — just not to the eye.
+      //
+      // 0.35 rather than 0.5: enough separation to read the layers, short of
+      // the near-black outlines full contrast produces.
+      contrastLevel: 0.35,
     );
     final text = _textTheme(scheme);
 
