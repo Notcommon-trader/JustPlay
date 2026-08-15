@@ -109,7 +109,20 @@ class _GameShellState extends State<GameShell> with WidgetsBindingObserver {
       builder: (context, _) {
         final state = _session.state;
 
-        return Scaffold(
+        return PopScope(
+          // Never pop directly. A system back gesture is the same intent as the
+          // close button and has to behave the same way — before this, back
+          // popped the route outright while the close button asked first, so a
+          // stray edge-swipe threw away a half-finished sudoku with no prompt.
+          //
+          // _confirmExit already distinguishes the two cases: a finished game
+          // leaves immediately, an unfinished one asks.
+          canPop: false,
+          onPopInvokedWithResult: (didPop, _) {
+            if (didPop) return;
+            _confirmExit();
+          },
+          child: Scaffold(
           appBar: AppBar(
             title: Text(widget.title),
             leading: IconButton(
@@ -170,6 +183,7 @@ class _GameShellState extends State<GameShell> with WidgetsBindingObserver {
                 ),
               ],
             ),
+          ),
           ),
         );
       },
