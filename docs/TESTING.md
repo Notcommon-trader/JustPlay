@@ -93,6 +93,68 @@ Always restore it: `addTearDown(() => tester.binding.setSurfaceSize(null))`.
 
 ---
 
+## The test agent
+
+`packages/jp_core/lib/src/testing/` holds an automated player. Every game
+implements `PlayableGame`, which the runner uses to deal a board, play legal
+moves until the game ends, and **re-check that game's invariants after every
+single move**.
+
+```bash
+dart run jp_core:soak --games 5000 --seed 90000
+```
+
+A small soak runs in the test suite on every commit; CI runs a larger one with a
+seed derived from the run number, so it keeps exploring new positions instead of
+re-testing the same games forever.
+
+**Why this earns its place.** A hand-written test plays one scripted game and
+asserts what the author already suspected. The agent plays millions of moves and
+asserts things that must hold in *all* of them. The strongest invariants are the
+ones nobody would think to assert by hand:
+
+- Solitaire counts all 52 distinct cards after every move. Any move that
+  duplicates or loses a card fails immediately.
+- Word search reads every placed word back off the grid.
+- Sliding puzzle checks the tiles are still a permutation *and* still solvable.
+- Sudoku checks no given ever changed.
+- Nonogram checks `isSolved` agrees with the row and column checks it is built
+  from.
+
+The runner also treats **"no legal move but the game is not finished"** as a
+failure. That is a softlock, and it is the bug class random play finds best.
+
+### It has already paid for itself
+
+The first real run reported: *"no legal move remains but the game is not
+finished"* on Solitaire, seed 96, move 119. That was not a test bug — a Klondike
+deal can genuinely die, and `SolitaireView` only ever called `finish(won)`. A
+player reaching a dead board would have sat there with no moves and no message.
+Fixed by adding `Solitaire.hasMoves`, and guarded by a test that replays seed 96.
+
+### Reading the report
+
+Always look at the counts, not just pass/fail:
+
+```
+Solitaire (draw 1): 200 games, 490120 moves, 80 finished, 0 exhausted, 120 truncated
+```
+
+`finished 0` means the agent never reached a terminal state — the win path is
+untested however green the run looks. That is exactly how the solitaire livelock
+was spotted: every game hit the move ceiling and none ever ended.
+
+The sliding puzzle truncates by design; random moves solve a 15-puzzle at a rate
+indistinguishable from never, so its value is the per-move invariant, not
+completion.
+
+### Adding a game
+
+Implement `PlayableGame` in `game_agents.dart` and add it to `allAgents()`. Make
+`step` play *badly* — random legal moves, not good ones. A strong player visits a
+narrow, sensible slice of the state space; a random one wanders into the corners
+where the bugs live.
+
 ## Conventions
 
 **Seed every source of randomness.** Rules take an injected `Random`; nothing calls

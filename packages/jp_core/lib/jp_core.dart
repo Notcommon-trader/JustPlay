@@ -17,3 +17,5 @@ export 'src/games/sudoku/sudoku_board.dart';
 export 'src/games/word_search/word_packs.dart';
 export 'src/games/word_search/word_search_grid.dart';
 export 'src/session/game_session_state.dart';
+export 'src/testing/game_agents.dart';
+export 'src/testing/playable_game.dart';

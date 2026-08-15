@@ -125,6 +125,48 @@ class Solitaire {
   bool get isWon =>
       foundations.every((pile) => pile.length == 13);
 
+  /// Whether any productive move remains.
+  ///
+  /// A Klondike deal can genuinely die: roughly one in fifty is unwinnable from
+  /// the start, and many more are lost by ordinary play. When the stock and
+  /// waste are empty and nothing will move, the game is over — and the app has
+  /// to say so, or the player is left staring at a board with no moves and no
+  /// explanation.
+  ///
+  /// **Taking a card back off a foundation does not count.** It is a legal move,
+  /// so counting it would make almost every dead position look alive; but a game
+  /// whose only remaining action is to undo previous progress is lost in every
+  /// practical sense, and every solitaire app treats it that way.
+  bool get hasMoves {
+    if (draw() != null) return true;
+    if (playWasteToFoundation() != null) return true;
+
+    for (var pile = 0; pile < tableauPiles; pile++) {
+      if (playTableauToFoundation(pile) != null) return true;
+      if (playWasteToTableau(pile) != null) return true;
+    }
+
+    for (var from = 0; from < tableauPiles; from++) {
+      for (var card = 0; card < tableau[from].length; card++) {
+        final run = runAt(from, card);
+        if (run == null) continue;
+
+        for (var to = 0; to < tableauPiles; to++) {
+          if (to == from) continue;
+          // Sliding a king between two empty piles changes nothing, so it must
+          // not count as a move that keeps the game alive.
+          if (card == 0 && tableau[to].isEmpty) continue;
+          if (canDropOnTableau(run.first, to)) return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  /// Won, or dead with no productive move left.
+  bool get isOver => isWon || !hasMoves;
+
   /// Cards still to be placed on a foundation.
   int get remainingCards =>
       52 - foundations.fold(0, (sum, pile) => sum + pile.length);

@@ -346,6 +346,61 @@ void main() {
     });
   });
 
+  group('a game that has died', () {
+    test('a fresh deal always has moves', () {
+      for (var seed = 0; seed < 20; seed++) {
+        expect(Solitaire.deal(random: Random(seed)).hasMoves, isTrue,
+            reason: 'seed $seed is dead on arrival');
+      }
+    });
+
+    test('seed 96 reaches a position with no move left', () {
+      // The regression. The automated agent in soak_test.dart found this: after
+      // 119 moves the board has no legal move and is not won, and the app used
+      // to leave the player sitting on it with no message, because the view only
+      // ever called finish(won).
+      final agent = SolitaireAgent();
+      final random = Random(96);
+      var game = agent.deal(random);
+
+      for (var move = 0; move < 119; move++) {
+        final next = agent.step(game, random);
+        if (next == null) break;
+        game = next;
+      }
+
+      expect(game.isWon, isFalse);
+      expect(game.hasMoves, isFalse);
+      expect(game.isOver, isTrue, reason: 'a dead deal is over, not in progress');
+    });
+
+    test('taking a card back off a foundation does not count as a move', () {
+      // A game whose only remaining action is undoing progress is lost in every
+      // practical sense, and counting it would make almost every dead position
+      // look alive.
+      final agent = SolitaireAgent();
+      final random = Random(96);
+      var game = agent.deal(random);
+
+      for (var move = 0; move < 119; move++) {
+        final next = agent.step(game, random);
+        if (next == null) break;
+        game = next;
+      }
+
+      // There is at least one card on a foundation that the rules would still
+      // allow back down — yet the position is correctly reported as dead.
+      final takebacks = [
+        for (final suit in Suit.values)
+          for (var pile = 0; pile < Solitaire.tableauPiles; pile++)
+            game.playFoundationToTableau(suit, pile),
+      ].where((g) => g != null);
+
+      expect(takebacks, isNotEmpty, reason: 'the premise of this test');
+      expect(game.hasMoves, isFalse);
+    });
+  });
+
   group('progress', () {
     test('a deal can be driven forward without the rules throwing', () {
       // Not every Klondike deal is winnable — roughly one in fifty is dead on

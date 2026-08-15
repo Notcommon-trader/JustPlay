@@ -93,7 +93,19 @@ class _SolitaireViewState extends State<SolitaireView> {
     widget.session.recordMove();
     if (gained != 0) widget.session.addScore(gained);
 
-    if (next.isWon) widget.session.finish(GameOutcome.won);
+    if (next.isWon) {
+      widget.session.finish(GameOutcome.won);
+      return;
+    }
+
+    // A dead deal is a real Klondike outcome, not an edge case — roughly one in
+    // fifty is unwinnable from the start, and plenty more are lost by ordinary
+    // play. Without this the player is left on a board with no legal move and
+    // nothing telling them so, waiting for something that will never happen.
+    //
+    // Found by the automated agent in soak_test.dart, which reported "no legal
+    // move remains but the game is not finished" on seed 96 after 119 moves.
+    if (!next.hasMoves) widget.session.finish(GameOutcome.lost);
   }
 
   void _drawFromStock() => _apply(_game.draw());

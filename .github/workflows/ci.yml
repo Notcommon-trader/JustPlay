@@ -46,6 +46,13 @@ jobs:
         run: dart test
         working-directory: packages/jp_core
 
+      # A deeper soak than the one in the test suite. Cheap — a few seconds —
+      # and it explores a different slice of the state space on every run
+      # because the seed moves with the run number.
+      - name: Soak the game agents
+        run: dart run bin/soak.dart --games 400 --seed ${{ github.run_number }}000
+        working-directory: packages/jp_core
+
       - name: Test jp_framework
         run: flutter test
         working-directory: packages/jp_framework

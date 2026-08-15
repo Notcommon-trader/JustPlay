@@ -275,6 +275,26 @@ class NonogramPuzzle {
     required int columns,
     required int rows,
   }) {
+    return solveByLines(
+          rowClues: rowClues,
+          columnClues: columnClues,
+          columns: columns,
+          rows: rows,
+        ) !=
+        null;
+  }
+
+  /// The answer these clues force, or null if line logic cannot finish it.
+  ///
+  /// Exposed because "can this be solved" and "what is the solution" are the
+  /// same computation, and the caller often wants the second: an automated agent
+  /// needs it to play the puzzle, and a hint button would need it too.
+  static List<bool>? solveByLines({
+    required List<List<int>> rowClues,
+    required List<List<int>> columnClues,
+    required int columns,
+    required int rows,
+  }) {
     final known = List<bool?>.filled(columns * rows, null);
     final cache = <String, List<List<bool>>?>{};
 
@@ -285,7 +305,7 @@ class NonogramPuzzle {
       for (var r = 0; r < rows; r++) {
         final line = [for (var c = 0; c < columns; c++) known[r * columns + c]];
         final deduced = _deduceLine(rowClues[r], line, cache);
-        if (deduced == null) return false;
+        if (deduced == null) return null;
 
         for (var c = 0; c < columns; c++) {
           if (deduced[c] != null && known[r * columns + c] == null) {
@@ -298,7 +318,7 @@ class NonogramPuzzle {
       for (var c = 0; c < columns; c++) {
         final line = [for (var r = 0; r < rows; r++) known[r * columns + c]];
         final deduced = _deduceLine(columnClues[c], line, cache);
-        if (deduced == null) return false;
+        if (deduced == null) return null;
 
         for (var r = 0; r < rows; r++) {
           if (deduced[r] != null && known[r * columns + c] == null) {
@@ -309,7 +329,10 @@ class NonogramPuzzle {
       }
     }
 
-    return known.every((cell) => cell != null);
+    // Anything still unknown means line logic stalled: the puzzle would need a
+    // guess, so it is not one we ship.
+    if (known.any((cell) => cell == null)) return null;
+    return [for (final cell in known) cell!];
   }
 
   /// Cells forced by [clues] given what is already [known].
