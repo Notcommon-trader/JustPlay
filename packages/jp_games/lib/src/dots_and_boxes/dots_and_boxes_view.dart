@@ -234,7 +234,19 @@ class _Grid extends StatelessWidget {
   final ValueChanged<Edge> onTapEdge;
   final ColorScheme scheme;
 
-  static const double _dotSize = 10;
+  /// Size of a dot's slot — and therefore the short dimension of every edge's
+  /// tap target, since edges fill the gaps between dots.
+  ///
+  /// Was 10, which made the game's *only* interaction a ten-pixel strip. The dot
+  /// drawn inside stays 6px; this is hit area, not ink.
+  ///
+  /// 24 is still under Material's 48dp minimum, so `androidTapTargetGuideline`
+  /// legitimately fails for this game and the exception is recorded in
+  /// docs/TESTING.md rather than hidden. Reaching 48 by widening these slots
+  /// would leave the dots floating in space; the real fix is to hit-test the
+  /// nearest edge across a whole box quadrant, which is a rewrite of _Grid and
+  /// has not been done.
+  static const double _dotSize = 24;
 
   Color _ownerColour(BoxOwner owner) => switch (owner) {
         BoxOwner.one => scheme.primary,
@@ -300,7 +312,17 @@ class _Grid extends StatelessWidget {
   Widget _edge(Edge edge) {
     final drawn = board.isDrawn(edge);
 
-    return GestureDetector(
+    final horizontal = edge.orientation == EdgeOrientation.horizontal;
+
+    return Semantics(
+      button: true,
+      enabled: !drawn && interactive,
+      label: drawn
+          ? '${horizontal ? 'Horizontal' : 'Vertical'} line, already drawn'
+          : 'Draw ${horizontal ? 'horizontal' : 'vertical'} line',
+      excludeSemantics: true,
+      onTap: drawn || !interactive ? null : () => onTapEdge(edge),
+      child: GestureDetector(
       key: dotsEdgeKey(edge),
       // Opaque so the whole slot is tappable, not just the thin drawn line —
       // a 4px hit target would be unusable on a phone.
@@ -316,6 +338,7 @@ class _Grid extends StatelessWidget {
             color: drawn ? scheme.onSurface : scheme.onSurface.withValues(alpha: 0.08),
             borderRadius: JpRadius.xs,
           ),
+        ),
         ),
       ),
     );

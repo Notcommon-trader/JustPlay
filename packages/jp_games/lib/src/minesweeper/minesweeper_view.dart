@@ -178,6 +178,16 @@ class _Cell extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onLongPress;
 
+  /// What a screen reader announces. Minesweeper is played entirely by counting
+  /// adjacent numbers, so the number is the whole content of the cell — a label
+  /// of just "button" would make the game unplayable rather than merely awkward.
+  String get _label {
+    if (state == CellState.flagged) return 'Flagged';
+    if (state == CellState.hidden) return 'Hidden';
+    if (isMine) return 'Mine';
+    return adjacent == 0 ? 'Empty' : '$adjacent adjacent';
+  }
+
   /// Number colours, following the convention every minesweeper player already
   /// has in their head: 1 blue, 2 green, 3 red, then progressively darker.
   Color _numberColour(ColorScheme scheme) {
@@ -197,7 +207,13 @@ class _Cell extends StatelessWidget {
     final revealed = state == CellState.revealed;
     final showMine = isMine && (revealed || revealAll);
 
-    return GestureDetector(
+    return Semantics(
+      button: true,
+      label: _label,
+      excludeSemantics: true,
+      onTap: onTap,
+      onLongPress: onLongPress,
+      child: GestureDetector(
       onTap: onTap,
       onLongPress: onLongPress,
       child: AnimatedContainer(
@@ -224,6 +240,7 @@ class _Cell extends StatelessWidget {
               ),
             _ => const SizedBox.shrink(),
           },
+          ),
         ),
       ),
     );

@@ -239,7 +239,17 @@ class _Cell extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    return GestureDetector(
+    return Semantics(
+      button: true,
+      label: switch (mark) {
+        NonogramMark.filled => 'Filled',
+        NonogramMark.crossed => 'Crossed out',
+        NonogramMark.blank => 'Blank',
+      },
+      excludeSemantics: true,
+      onTap: onTap,
+      onLongPress: onLongPress,
+      child: GestureDetector(
       onTap: onTap,
       onLongPress: onLongPress,
       child: AnimatedContainer(
@@ -261,6 +271,7 @@ class _Cell extends StatelessWidget {
                 ),
               )
             : null,
+        ),
       ),
     );
   }

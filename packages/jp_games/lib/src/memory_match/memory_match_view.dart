@@ -187,7 +187,19 @@ class _Card extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    return GestureDetector(
+    return Semantics(
+      button: true,
+      // The icon is never named. Announcing which symbol is on a face-down card
+      // would hand the game away, and announcing it on a face-up one is what the
+      // player can already see — so state is the useful thing to say.
+      label: switch (state) {
+        CardState.faceDown => 'Face down card',
+        CardState.faceUp => 'Face up card',
+        CardState.matched => 'Matched card',
+      },
+      excludeSemantics: true,
+      onTap: onTap,
+      child: GestureDetector(
       onTap: onTap,
       child: TweenAnimationBuilder<double>(
         tween: Tween(begin: 0, end: _revealed ? 1 : 0),
@@ -215,6 +227,7 @@ class _Card extends StatelessWidget {
                 : _face(scheme, front: false),
           );
         },
+        ),
       ),
     );
   }

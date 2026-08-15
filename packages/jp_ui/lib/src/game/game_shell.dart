@@ -323,35 +323,67 @@ class _Overlay extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    final scheme = theme.colorScheme;
+
     return Positioned.fill(
       child: ColoredBox(
-        color: theme.colorScheme.scrim.withValues(alpha: 0.55),
+        color: scheme.scrim.withValues(alpha: 0.55),
         child: Center(
           child: Padding(
             padding: JpSpace.screen,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(title, style: theme.textTheme.headlineMedium, textAlign: TextAlign.center),
-                if (message != null) ...[
-                  const SizedBox(height: JpSpace.sm),
-                  Text(message!, style: theme.textTheme.bodyLarge, textAlign: TextAlign.center),
-                ],
-                const SizedBox(height: JpSpace.xl),
-                JpButton(
-                  label: primaryLabel,
-                  onPressed: onPrimary,
-                  size: JpButtonSize.large,
-                  expand: true,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              // A real panel, not text floating on a dimmed board.
+              //
+              // The first version put theme text straight onto the scrim, where
+              // `onSurface` colours meant for a light surface sat on a dark wash:
+              // the "Paused" heading measured 2.75:1 against a required 3.0, and
+              // the ghost "Quit" button 1.43:1 against a required 4.5 — very
+              // nearly invisible. Caught by textContrastGuideline, not by any
+              // golden, because a golden records what a thing looks like and has
+              // no opinion about whether it can be read.
+              child: Container(
+                padding: const EdgeInsets.all(JpSpace.xl),
+                decoration: BoxDecoration(
+                  color: scheme.surfaceContainerHigh,
+                  borderRadius: JpRadius.lg,
+                  boxShadow: JpElevation.high(scheme.shadow),
                 ),
-                const SizedBox(height: JpSpace.md),
-                JpButton(
-                  label: secondaryLabel,
-                  onPressed: onSecondary,
-                  variant: JpButtonVariant.ghost,
-                  expand: true,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      title,
+                      style: theme.textTheme.headlineMedium
+                          ?.copyWith(color: scheme.onSurface),
+                      textAlign: TextAlign.center,
+                    ),
+                    if (message != null) ...[
+                      const SizedBox(height: JpSpace.sm),
+                      Text(
+                        message!,
+                        style: theme.textTheme.bodyLarge
+                            ?.copyWith(color: scheme.onSurfaceVariant),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                    const SizedBox(height: JpSpace.xl),
+                    JpButton(
+                      label: primaryLabel,
+                      onPressed: onPrimary,
+                      size: JpButtonSize.large,
+                      expand: true,
+                    ),
+                    const SizedBox(height: JpSpace.md),
+                    JpButton(
+                      label: secondaryLabel,
+                      onPressed: onSecondary,
+                      variant: JpButtonVariant.ghost,
+                      expand: true,
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),

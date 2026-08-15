@@ -290,7 +290,14 @@ class _TopRow extends StatelessWidget {
       height: cardHeight,
       child: Row(
         children: [
-          GestureDetector(
+          Semantics(
+            button: true,
+            label: game.stock.isEmpty
+                ? 'Turn the pile back over'
+                : 'Deal from the stock, ${game.stock.length} cards left',
+            excludeSemantics: true,
+            onTap: onStockTap,
+            child: GestureDetector(
             key: solitaireStockKey,
             onTap: onStockTap,
             child: _Slot(
@@ -302,6 +309,7 @@ class _TopRow extends StatelessWidget {
               child: game.stock.isEmpty
                   ? null
                   : _CardFace(card: game.stock.last, width: cardWidth),
+            ),
             ),
           ),
           SizedBox(width: gap),
@@ -435,9 +443,15 @@ class _DraggableCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final card = drag.cards.first;
 
-    final body = GestureDetector(
+    final body = Semantics(
+      button: true,
+      label: describeCard(card),
+      excludeSemantics: true,
       onTap: onTap,
-      child: _CardFace(card: card, width: width, height: height),
+      child: GestureDetector(
+        onTap: onTap,
+        child: _CardFace(card: card, width: width, height: height),
+      ),
     );
 
     return Draggable<SolitaireDrag>(
@@ -519,7 +533,11 @@ class _Slot extends StatelessWidget {
                         _suitSymbol(suit!),
                         style: TextStyle(
                           fontSize: width * 0.4,
-                          color: scheme.onSurfaceVariant.withValues(alpha: 0.4),
+                          // 0.4 alpha measured 2.02:1 against a required 3.0.
+                          // These watermarks say which suit belongs where, so
+                          // they are information, not decoration, and have to be
+                          // legible rather than merely suggestive.
+                          color: scheme.onSurfaceVariant.withValues(alpha: 0.75),
                         ),
                       )
                     : null,
@@ -596,6 +614,24 @@ class _CardFace extends StatelessWidget {
       ),
     );
   }
+}
+
+/// A card, spoken rather than drawn.
+///
+/// Suit symbols are glyphs a screen reader either skips or reads as something
+/// unhelpful, so the name is spelled out. A face-down card is named as such and
+/// nothing more — announcing what it is would hand the game away.
+String describeCard(PlayingCard card) {
+  if (!card.faceUp) return 'Face down card';
+
+  final rank = switch (card.rank) {
+    1 => 'Ace',
+    11 => 'Jack',
+    12 => 'Queen',
+    13 => 'King',
+    _ => '${card.rank}',
+  };
+  return '$rank of ${card.suit.name}';
 }
 
 String _rankLabel(int rank) => switch (rank) {

@@ -93,6 +93,67 @@ Always restore it: `addTearDown(() => tester.binding.setSurfaceSize(null))`.
 
 ---
 
+## UI and UX testing
+
+Two suites in `jp_games`, both automated.
+
+### `accessibility_test.dart` — Flutter's own guideline audits
+
+`textContrastGuideline` (WCAG AA), `androidTapTargetGuideline` (Material's 48dp
+minimum) and `labeledTapTargetGuideline`, run against every game. These are not
+opinions — they are requirements a store review can cite, and all three are
+invisible in a screenshot. A control can look perfectly fine and still be
+unreadable or untappable.
+
+The first run failed **nine** checks. What it found:
+
+| Problem | Measured | Required |
+|---|---|---|
+| Pause/game-over overlay: "Quit" button | 1.43:1 | 4.5:1 |
+| Pause/game-over overlay: "Paused" heading | 2.75:1 | 3.0:1 |
+| Solitaire foundation suit watermarks | 2.02:1 | 3.0:1 |
+| Six games: cells with no semantic label | — | any label |
+| Dots & Boxes edge tap target | 10pt | 48pt |
+
+The overlay was the worst and affected every game: theme text meant for a light
+surface was being painted straight onto a dark scrim, at the exact moment the
+player is being asked to make a decision. It is now a proper elevated panel.
+
+**Accepted exceptions**, listed rather than hidden:
+
+- **Dense grids** (sudoku, minesweeper, nonogram, word search, solitaire) cannot
+  meet the 48dp tap target. A 9×9 sudoku on a 390pt phone gives each cell about
+  39pt; meeting the guideline would need a board wider than the screen. Every
+  sudoku app makes this trade. It is a real accessibility cost, not a
+  technicality.
+- **Dots & Boxes** edges went from 10pt to 24pt — a large improvement to a
+  genuinely frustrating control, still short of 48. The proper fix is
+  hit-testing the nearest edge across a whole box quadrant, which is a rewrite of
+  its grid and has not been done.
+
+### `ui_soak_test.dart` — the UI monkey
+
+The rules agent proves the *logic* survives extended play. This proves the
+*widgets* do, which is a different bug class: hit-testing outside a parent's
+bounds, a timer firing after dispose, `setState` on an unmounted `State`, a board
+that overflows when it reflows.
+
+It fires random taps and drags at every screen — on the board, off the board,
+mid-animation — hammers pause and restart, tears the screen down while animations
+are still running, and renders every game at four screen sizes from 320×568 up.
+Any exception fails, because an unhandled exception in a widget test is a red
+screen in production.
+
+It found Sudoku's control row overflowing by 50pt at 320 and 9.5pt at 360: the
+three chips need 337.5pt laid out in a line and only 304pt is available. They
+wrap now.
+
+**One trap worth knowing.** Pumping games one after another into the same tester
+reuses `GameShell`'s `State`, and with it the previous game's session — so a
+failure gets blamed on whichever game is on screen when you check. The layout
+tests mount a blank widget between games. The real app never hits this, because
+every game is pushed as its own route.
+
 ## The test agent
 
 `packages/jp_core/lib/src/testing/` holds an automated player. Every game

@@ -210,6 +210,8 @@ class _Grid extends StatelessWidget {
                               return Expanded(
                                 child: _Cell(
                                   key: sudokuCellKey(index),
+                                  row: row + 1,
+                                  column: column + 1,
                                   digit: board.entries[index],
                                   notes: board.notes[index],
                                   isGiven: board.isGiven(index),
@@ -247,6 +249,8 @@ class _Grid extends StatelessWidget {
 
 class _Cell extends StatelessWidget {
   const _Cell({
+    required this.row,
+    required this.column,
     required this.digit,
     required this.notes,
     required this.isGiven,
@@ -258,6 +262,8 @@ class _Cell extends StatelessWidget {
     super.key,
   });
 
+  final int row;
+  final int column;
   final int? digit;
   final Set<int> notes;
   final bool isGiven;
@@ -271,6 +277,24 @@ class _Cell extends StatelessWidget {
 
   final bool isConflict;
   final VoidCallback onTap;
+
+  /// Row and column are 1-based here because they are read aloud, and "row one"
+  /// is what a person says. Notes are announced too — a screen-reader user is
+  /// carrying the whole grid in their head and pencil marks are how anyone does
+  /// that.
+  String get semanticLabel {
+    final where = 'Row $row, column $column';
+    if (digit != null) {
+      final kind = isGiven ? 'given' : 'your answer';
+      final clash = isConflict ? ', conflicts' : '';
+      return '$where, $digit, $kind$clash';
+    }
+    if (notes.isNotEmpty) {
+      final marks = (notes.toList()..sort()).join(', ');
+      return '$where, empty, notes $marks';
+    }
+    return '$where, empty';
+  }
 
   Color _background(ColorScheme scheme) {
     if (isConflict) return scheme.errorContainer;
@@ -286,7 +310,12 @@ class _Cell extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    return GestureDetector(
+    return Semantics(
+      button: true,
+      label: semanticLabel,
+      excludeSemantics: true,
+      onTap: onTap,
+      child: GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: JpDuration.instant,
@@ -315,6 +344,7 @@ class _Cell extends StatelessWidget {
                   ),
                 )
               : _Notes(notes: notes, colour: scheme.onSurfaceVariant),
+          ),
         ),
       ),
     );
@@ -425,8 +455,18 @@ class _Controls extends StatelessWidget {
         horizontal: JpSpace.lg,
         vertical: JpSpace.md,
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      // Wrap, not Row. These three chips need about 369pt laid out in a line,
+      // so on a 360pt phone they overflowed by 9.5pt and on a 320pt one by 50 —
+      // a yellow-and-black stripe across the controls of the app's flagship
+      // puzzle. Wrapping moves the third chip to a second line instead, which
+      // costs a few points of height on small screens and nothing on large ones.
+      //
+      // Scaling the row down with a FittedBox would also have "fixed" it, by
+      // shrinking the text below the size it was chosen to be.
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        spacing: JpSpace.md,
+        runSpacing: JpSpace.sm,
         children: [
           _ControlButton(
             key: sudokuEraseKey,
