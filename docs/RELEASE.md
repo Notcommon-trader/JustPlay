@@ -7,12 +7,25 @@ what, not by effort.
 
 ## Blockers
 
-### 1. Signing — the release build uses debug keys
+### 1. Signing — Gradle is wired, the keystore does not exist
 
-`apps/timekiller/android/app/build.gradle.kts` signs release with
-`signingConfigs.getByName("debug")`. Play rejects a debug-signed upload outright.
+`build.gradle.kts` now reads `android/key.properties` when it is present and signs
+release with it, falling back to debug keys when it is absent. So the only thing
+missing is the keystore itself.
 
-**This is yours to do, not mine.** Generating a keystore creates a credential; it
+Until it exists, every release build logs:
+
+```
+JustPlay: android/key.properties not found — release builds will be signed
+with DEBUG keys and cannot be uploaded to Play.
+```
+
+The fallback is deliberate — it keeps `flutter build apk --release` working on a
+fresh clone and on CI — and it is also a trap, because a debug-signed APK looks
+completely normal until Play rejects it. That is why the warning fires on every
+such build rather than staying quiet.
+
+**Generating the keystore is yours to do, not mine.** It creates a credential; it
 must never be committed, and nobody should paste it into a chat. `.gitignore`
 already blocks `*.jks`, `*.keystore` and `key.properties`.
 
@@ -30,10 +43,13 @@ keyAlias=upload
 storeFile=C:/path/outside/the/repo/upload-keystore.jks
 ```
 
-And in `build.gradle.kts`, load it and replace the debug `signingConfig`. Flutter's
-["Build and release an Android app"](https://docs.flutter.dev/deployment/android)
-page has the exact block; it has changed shape across versions, so copy it from
-the docs for the Flutter you are on rather than from memory.
+That is the whole change — Gradle already knows what to do with the file. Confirm
+it took effect by checking that the warning above no longer appears, then verify
+the signature:
+
+```bash
+keytool -printcert -jarfile apps/timekiller/build/app/outputs/flutter-apk/app-release.apk
+```
 
 **Enrol in Play App Signing.** Google then holds the *app* signing key and you hold
 only the *upload* key. That matters: a lost upload key can be reset by Play support,
@@ -70,8 +86,13 @@ and feature graphic are not, because the app looks nothing like it did.
   a stale Data Safety declaration is a policy violation, not an oversight.
 - **App icon.** `@mipmap/ic_launcher` is still Flutter's default. Needed at every
   density plus a 512×512 for the listing.
-- **Test the release build**, not just debug: `flutter build appbundle` behaves
-  differently under R8 shrinking, and code that works in debug can fail there.
+- **Ship an app bundle, not the APK.** `flutter build apk --release` produces a
+  44.5 MB fat APK carrying every ABI. `flutter build appbundle` lets Play split
+  it per device, roughly a third of that on any given phone. Install size is one
+  of the few things that measurably moves install conversion.
+- **R8 shrinking is on**, and it is verified: CI builds release as well as debug,
+  and the shrunk build has been installed and launched on an emulator. Worth
+  re-checking after adding any plugin, because R8 failures surface at runtime.
 
 ---
 

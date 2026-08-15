@@ -50,6 +50,10 @@ jobs:
         run: flutter test
         working-directory: packages/jp_framework
 
+      - name: Test jp_monetization
+        run: flutter test
+        working-directory: packages/jp_monetization
+
       - name: Test jp_ui
         run: flutter test
         working-directory: packages/jp_ui
@@ -100,4 +104,14 @@ jobs:
 
       - name: Build debug APK
         run: flutter build apk --debug
+        working-directory: apps/timekiller
+
+      # Release too, because it is a different build: R8 shrinking runs here and
+      # nowhere else. The first release build made after enabling it failed on
+      # missing Play Core classes while every debug build stayed green.
+      #
+      # Signed with debug keys on CI — key.properties is not present, by design.
+      # This proves the build works, not that the artefact is uploadable.
+      - name: Build release APK
+        run: flutter build apk --release
         working-directory: apps/timekiller

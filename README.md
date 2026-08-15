@@ -20,12 +20,13 @@ per-package `pub get` and no Melos to install.
 
 ```
 packages/
-  jp_core/        Pure Dart game rules. No Flutter import, ever.
-  jp_framework/   Platform services: storage, records. Settings and consent to come.
-  jp_ui/          Design system: tokens, widgets, the game shell.
-  jp_games/       The catalogue. One folder per game; games never import each other.
+  jp_core/          Pure Dart game rules. No Flutter import, ever.
+  jp_framework/     Platform services: storage, records. Settings to come.
+  jp_monetization/  Consent, entitlements, ads. Ports only — no vendor SDK yet.
+  jp_ui/            Design system: tokens, widgets, the game shell.
+  jp_games/         The catalogue. One folder per game; games never import each other.
 apps/
-  timekiller/     App #1. Assembles the framework and a subset of games.
+  timekiller/       App #1. Assembles the framework and a subset of games.
 ```
 
 Adding a game is a rules file in `jp_core`, a view and definition in `jp_games`, and one entry in the
@@ -35,11 +36,12 @@ the mechanism that keeps a second app cheap.
 ## Tests
 
 ```bash
-cd packages/jp_core      && dart test
-cd packages/jp_framework && flutter test
-cd packages/jp_ui        && flutter test
-cd packages/jp_games     && flutter test
-cd apps/timekiller       && flutter test
+cd packages/jp_core         && dart test
+cd packages/jp_framework    && flutter test
+cd packages/jp_monetization && flutter test
+cd packages/jp_ui           && flutter test
+cd packages/jp_games        && flutter test
+cd apps/timekiller          && flutter test
 ```
 
 Golden images are generated on Windows and are platform-sensitive, which is why CI runs the suite on

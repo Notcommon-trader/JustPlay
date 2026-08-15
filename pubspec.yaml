@@ -12,6 +12,7 @@ environment:
 workspace:
   - packages/jp_core
   - packages/jp_framework
+  - packages/jp_monetization
   - packages/jp_ui
   - packages/jp_games
   - apps/timekiller
