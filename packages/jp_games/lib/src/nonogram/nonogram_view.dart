@@ -93,30 +93,41 @@ class _NonogramViewState extends State<NonogramView> {
         padding: const EdgeInsets.all(JpSpace.lg),
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final side = min(constraints.maxWidth, constraints.maxHeight);
+            // The gutters are sized to the longest clue, not to a fixed
+            // fraction. A fixed fraction has to guess, and it guesses wrong in
+            // both directions: too small and a four-number clue overflows its
+            // slot, too large and the grid is squeezed for gutters that are
+            // mostly empty. Measuring costs one pass over the clues.
+            final rowClueSlots =
+                _puzzle.rowClues.fold(1, (m, clue) => max(m, clue.length));
+            final columnClueSlots =
+                _puzzle.columnClues.fold(1, (m, clue) => max(m, clue.length));
 
-            // A quarter of the square goes to the clue gutters. Less than that
-            // and a five-number clue is unreadable; more and the grid — the part
-            // you actually look at — starts to feel cramped.
-            final gutter = side * 0.24;
-            final boardSide = side - gutter;
-            final cell = boardSide / max(widget.columns, widget.rows);
+            // One cell size for everything, so clue numbers sit on the same grid
+            // as the cells they describe. Whichever axis is tighter decides it.
+            final cell = min(
+              constraints.maxWidth / (widget.columns + rowClueSlots),
+              constraints.maxHeight / (widget.rows + columnClueSlots),
+            );
+
+            final rowGutter = cell * rowClueSlots;
+            final columnGutter = cell * columnClueSlots;
 
             return SizedBox(
-              width: gutter + cell * widget.columns,
-              height: gutter + cell * widget.rows,
+              width: rowGutter + cell * widget.columns,
+              height: columnGutter + cell * widget.rows,
               child: Column(
                 children: [
                   Row(
                     children: [
-                      SizedBox(width: gutter, height: gutter),
+                      SizedBox(width: rowGutter, height: columnGutter),
                       for (var c = 0; c < widget.columns; c++)
                         _ColumnClue(
                           key: nonogramColumnClueKey(c),
                           clue: _puzzle.columnClues[c],
                           satisfied: _puzzle.isColumnSatisfied(c),
                           width: cell,
-                          height: gutter,
+                          height: columnGutter,
                         ),
                     ],
                   ),
@@ -130,7 +141,7 @@ class _NonogramViewState extends State<NonogramView> {
                                 key: nonogramRowClueKey(r),
                                 clue: _puzzle.rowClues[r],
                                 satisfied: _puzzle.isRowSatisfied(r),
-                                width: gutter,
+                                width: rowGutter,
                                 height: cell,
                               ),
                           ],
@@ -291,6 +302,13 @@ class _GuidePainter extends CustomPainter {
 }
 
 /// Clue numbers above a column, read top to bottom.
+///
+/// Each number occupies one cell-sized slot, stacked upward from the grid. The
+/// first version gave every number an [Expanded] slot instead, which divided the
+/// gutter by however many clues that column had — so a two-clue column and a
+/// three-clue column put their numbers at different heights and nothing lined
+/// up across the board. A nonogram is read by scanning rows and columns of
+/// numbers; misaligned clues make that scan impossible.
 class _ColumnClue extends StatelessWidget {
   const _ColumnClue({
     required this.clue,
@@ -302,7 +320,11 @@ class _ColumnClue extends StatelessWidget {
 
   final List<int> clue;
   final bool satisfied;
+
+  /// One cell wide. Also the height of each clue slot, so numbers sit on the
+  /// same grid as the cells they describe.
   final double width;
+
   final double height;
 
   @override
@@ -316,7 +338,8 @@ class _ColumnClue extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
             for (final number in clue)
-              Expanded(
+              SizedBox(
+                height: width,
                 child: _ClueNumber(number: number, satisfied: satisfied),
               ),
           ],
@@ -352,7 +375,11 @@ class _RowClue extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
             for (final number in clue)
-              Expanded(
+              SizedBox(
+                // One cell wide, so the last number of every row ends flush
+                // against the grid and the columns of clues align. See
+                // _ColumnClue for why Expanded was wrong here.
+                width: height,
                 child: _ClueNumber(number: number, satisfied: satisfied),
               ),
           ],
