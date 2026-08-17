@@ -36,6 +36,26 @@ void main() {
     );
   });
 
+  testWidgets('the game grid, dark', (tester) async {
+    // Saturated colour on a dark ground is where eye strain lives: the same
+    // gradient that reads as lively at noon glares at midnight.
+    await phone(tester);
+    final records = emptyStore();
+    addTearDown(records.dispose);
+    await records.load();
+
+    tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
+    addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+
+    await tester.pumpWidget(TimeKillerApp(records: records));
+    await tester.pumpAndSettle();
+
+    await expectLater(
+      find.byType(MaterialApp),
+      matchesGoldenFile('goldens/home_grid_dark.png'),
+    );
+  });
+
   testWidgets('the game sheet explains the rules and offers levels',
       (tester) async {
     await phone(tester);

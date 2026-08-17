@@ -127,10 +127,23 @@ class _GameTileState extends State<_GameTile> {
   Widget build(BuildContext context) {
     final entry = widget.entry;
 
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     // A gradient rather than a flat fill. One colour reads as a category chip;
     // two reads as a surface with light falling on it, which is the difference
     // between a form control and something that looks made.
-    final dark = Color.lerp(entry.colour, Colors.black, 0.28)!;
+    //
+    // **Dimmed in dark mode.** The first version used the raw colour in both
+    // brightnesses, which put ten full-saturation blocks against a near-black
+    // page — the exact combination that glares at night. Pulling the tile toward
+    // the surface keeps each game's hue identifiable while taking the burn out
+    // of it; the identity survives the dimming because hue, not intensity, is
+    // what tells Minesweeper from Solitaire.
+    final base = isDark
+        ? Color.lerp(entry.colour, scheme.surface, 0.30)!
+        : entry.colour;
+    final dark = Color.lerp(base, Colors.black, isDark ? 0.34 : 0.28)!;
 
     return AnimatedOpacity(
       opacity: _visible ? 1 : 0,
@@ -198,10 +211,13 @@ class _GameTileState extends State<_GameTile> {
                         const SizedBox(height: JpSpace.xxs),
                         Text(
                           entry.tagline,
-                          style: const TextStyle(
-                            // White at 85% rather than a second colour: on a
-                            // saturated tile any tinted grey reads as dirty.
-                            color: Colors.white,
+                          style: TextStyle(
+                            // 85%, not full white. Pure white on a saturated
+                            // ground is the harshest pairing on a screen, and
+                            // secondary text does not need to shout. A tinted
+                            // grey would read as dirty here, so the softening is
+                            // in the alpha rather than the hue.
+                            color: Colors.white.withValues(alpha: 0.85),
                             fontSize: JpTextSize.caption,
                             height: 1.25,
                           ),
