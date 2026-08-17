@@ -3,155 +3,432 @@ import 'package:jp_core/jp_core.dart';
 import 'package:jp_games/jp_games.dart';
 import 'package:jp_ui/jp_ui.dart';
 
-/// One entry in the app's game list.
+/// One step of a game's rules, as a player would be told them out loud.
 ///
-/// Names and descriptions are plain strings here rather than localization keys,
-/// because no l10n package has landed yet. When it does, this is the one place
-/// that changes — the [GameDefinition]s already carry their key names.
+/// An icon and a sentence, not a paragraph. Nobody reads a wall of rules on a
+/// phone — they tap Play and work it out, and the only instructions that get
+/// read are the ones that fit on a card.
+class HowToStep {
+  const HowToStep({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+}
+
+/// One difficulty or board size within a game.
+///
+/// These used to be separate rows on the home screen: "Sudoku · Easy", "Sudoku",
+/// "Sudoku · Hard" sat as three unrelated entries among twenty-one, which made
+/// the list long enough that whole games went unnoticed, and made the app read
+/// as a directory rather than something to play. A level belongs *inside* its
+/// game, chosen after you have decided what you want to play.
+class GameLevel {
+  const GameLevel({
+    required this.label,
+    required this.definition,
+    this.detail,
+  });
+
+  /// Shown on the chip. Short — it has to fit four across.
+  final String label;
+
+  /// One line under the chosen chip, for what the label cannot say.
+  final String? detail;
+
+  final GameDefinition definition;
+}
+
+/// A game, with everything the app needs to present it.
 class CatalogueEntry {
   const CatalogueEntry({
-    required this.definition,
     required this.name,
     required this.tagline,
     required this.icon,
+    required this.colour,
+    required this.howToPlay,
+    required this.levels,
   });
 
-  final GameDefinition definition;
   final String name;
   final String tagline;
   final IconData icon;
+
+  /// The game's own identity colour.
+  ///
+  /// Seeds the whole theme while that game is open, so Minesweeper is red and
+  /// Solitaire is green rather than every screen being the same indigo. This is
+  /// the cheapest thing that separates an app that feels like a game from one
+  /// that feels like a settings menu — and the previous build was uniformly one
+  /// hue, which is exactly how it read.
+  final Color colour;
+
+  final List<HowToStep> howToPlay;
+  final List<GameLevel> levels;
+
+  /// The level a player gets if they just hit Play. The middle one where there
+  /// are three, so the default is neither patronising nor punishing.
+  GameLevel get defaultLevel => levels[levels.length ~/ 2];
 }
 
-/// What ships in this app.
-///
-/// The catalogue is data, not code: adding a game is one entry here plus its
-/// package. Nothing in the home screen or the shell needs to know it happened,
-/// which is the mechanism that keeps a second app cheap.
+/// What ships in this app: ten games, each with its own levels.
 const List<CatalogueEntry> appCatalogue = [
   CatalogueEntry(
-    definition: Game2048Definition(),
-    name: '2048',
-    tagline: 'Slide and merge to reach 2048',
-    icon: Icons.grid_4x4,
-  ),
-  CatalogueEntry(
-    definition: Game2048Definition(boardSize: 5),
-    name: '2048 · Relaxed',
-    tagline: 'A bigger board and more room to think',
+    name: 'Sudoku',
+    tagline: 'Fill the grid, one to nine',
     icon: Icons.grid_on,
+    colour: Color(0xFF1E88E5),
+    howToPlay: [
+      HowToStep(
+        icon: Icons.looks_one,
+        text: 'Every row, column and 3×3 box holds 1 to 9, once each.',
+      ),
+      HowToStep(
+        icon: Icons.touch_app,
+        text: 'Tap a square, then tap a number. Tap it again to clear it.',
+      ),
+      HowToStep(
+        icon: Icons.edit_note,
+        text: 'Notes let you pencil in maybes. Hint fills one square in.',
+      ),
+      HowToStep(
+        icon: Icons.verified,
+        text: 'Every puzzle has exactly one answer. You never have to guess.',
+      ),
+    ],
+    levels: [
+      GameLevel(
+        label: 'Easy',
+        detail: '42 given numbers — room to breathe',
+        definition: SudokuDefinition(difficulty: SudokuDifficulty.easy),
+      ),
+      GameLevel(
+        label: 'Medium',
+        detail: '34 given numbers',
+        definition: SudokuDefinition(),
+      ),
+      GameLevel(
+        label: 'Hard',
+        detail: '28 given numbers — bring pencil marks',
+        definition: SudokuDefinition(difficulty: SudokuDifficulty.hard),
+      ),
+    ],
   ),
   CatalogueEntry(
-    definition: Game2048Definition(boardSize: 3),
-    name: '2048 · Tight',
-    tagline: 'Three by three. Good luck',
-    icon: Icons.grid_3x3,
-  ),
-  CatalogueEntry(
-    definition: SlidingPuzzleDefinition(),
-    name: 'Sliding Puzzle',
-    tagline: 'Slide the tiles back into order',
-    icon: Icons.apps,
-  ),
-  CatalogueEntry(
-    definition: SlidingPuzzleDefinition(boardSize: 3),
-    name: 'Sliding Puzzle · Eight',
-    tagline: 'The gentler eight-tile version',
-    icon: Icons.apps_outlined,
-  ),
-  CatalogueEntry(
-    definition: MemoryMatchDefinition(),
-    name: 'Memory Match',
-    tagline: 'Find every pair before the clock runs away',
+    name: 'Solitaire',
+    tagline: 'Klondike, the way you remember it',
     icon: Icons.style,
+    colour: Color(0xFF2E7D32),
+    howToPlay: [
+      HowToStep(
+        icon: Icons.swap_vert,
+        text: 'Build the four piles at the top up from ace to king, by suit.',
+      ),
+      HowToStep(
+        icon: Icons.drag_indicator,
+        text: 'Down the board, stack cards in falling order, alternating red '
+            'and black.',
+      ),
+      HowToStep(
+        icon: Icons.touch_app,
+        text: 'Drag a card, or just tap it and it goes where it can.',
+      ),
+      HowToStep(
+        icon: Icons.refresh,
+        text: 'Tap the deck for a new card. Empty spaces take a king.',
+      ),
+    ],
+    levels: [
+      GameLevel(
+        label: 'Draw one',
+        detail: 'One card at a time — the friendlier rule',
+        definition: SolitaireDefinition(),
+      ),
+      GameLevel(
+        label: 'Draw three',
+        detail: 'Three at a time — the traditional, harder rule',
+        definition: SolitaireDefinition.drawThree,
+      ),
+    ],
   ),
   CatalogueEntry(
-    definition: MemoryMatchDefinition(pairs: 6, columns: 3),
-    name: 'Memory Match · Quick',
-    tagline: 'Six pairs, a two-minute round',
-    icon: Icons.style_outlined,
+    name: '2048',
+    tagline: 'Slide, merge, and keep going',
+    icon: Icons.dialpad,
+    colour: Color(0xFFF57C00),
+    howToPlay: [
+      HowToStep(
+        icon: Icons.swipe,
+        text: 'Swipe any direction. Every tile slides as far as it can.',
+      ),
+      HowToStep(
+        icon: Icons.merge_type,
+        text: 'Two matching tiles that touch become one, worth double.',
+      ),
+      HowToStep(
+        icon: Icons.add_box,
+        text: 'A new tile appears after every move. Fill the board and it ends.',
+      ),
+      HowToStep(
+        icon: Icons.emoji_events,
+        text: 'Reach 2048. Then find out how much further you can push it.',
+      ),
+    ],
+    levels: [
+      GameLevel(
+        label: '3×3',
+        detail: 'Cramped and quick',
+        definition: Game2048Definition(boardSize: 3),
+      ),
+      GameLevel(
+        label: '4×4',
+        detail: 'The original',
+        definition: Game2048Definition(),
+      ),
+      GameLevel(
+        label: '5×5',
+        detail: 'More room, longer game',
+        definition: Game2048Definition(boardSize: 5),
+      ),
+    ],
   ),
   CatalogueEntry(
-    definition: MinesweeperDefinition.beginner,
     name: 'Minesweeper',
-    tagline: 'Nine by nine, ten mines. Long press to flag',
+    tagline: 'Clear the board, avoid the mines',
     icon: Icons.flag,
+    colour: Color(0xFFE53935),
+    howToPlay: [
+      HowToStep(
+        icon: Icons.touch_app,
+        text: 'Tap to open a square. Your first tap is always safe.',
+      ),
+      HowToStep(
+        icon: Icons.pin,
+        text: 'A number says how many mines touch that square.',
+      ),
+      HowToStep(
+        icon: Icons.flag,
+        text: 'Press and hold to plant a flag where you think a mine is.',
+      ),
+      HowToStep(
+        icon: Icons.check_circle,
+        text: 'Open every square that is not a mine to win.',
+      ),
+    ],
+    levels: [
+      GameLevel(
+        label: 'Beginner',
+        detail: '9×9 with 10 mines',
+        definition: MinesweeperDefinition.beginner,
+      ),
+      GameLevel(
+        label: 'Harder',
+        detail: '12×12 with 25 mines',
+        definition: MinesweeperDefinition.intermediate,
+      ),
+    ],
   ),
   CatalogueEntry(
-    definition: MinesweeperDefinition.intermediate,
-    name: 'Minesweeper · Harder',
-    tagline: 'Twelve by twelve, twenty-five mines',
-    icon: Icons.flag_outlined,
+    name: 'Word Search',
+    tagline: 'Find the hidden words',
+    icon: Icons.search,
+    colour: Color(0xFF00ACC1),
+    howToPlay: [
+      HowToStep(
+        icon: Icons.list_alt,
+        text: 'The words to find are listed under the grid.',
+      ),
+      HowToStep(
+        icon: Icons.swipe,
+        text: 'Drag from the first letter to the last to select a word.',
+      ),
+      HowToStep(
+        icon: Icons.open_with,
+        text: 'Words run in any of eight directions — including backwards.',
+      ),
+      HowToStep(
+        icon: Icons.done_all,
+        text: 'Find them all. A wrong drag costs you nothing.',
+      ),
+    ],
+    levels: [
+      GameLevel(
+        label: 'Standard',
+        detail: '10×10 grid, 8 words',
+        definition: WordSearchDefinition(),
+      ),
+      GameLevel(
+        label: 'Long haul',
+        detail: '12×12 grid, 12 words',
+        definition: WordSearchDefinition.large,
+      ),
+    ],
   ),
   CatalogueEntry(
-    definition: DotsAndBoxesDefinition(),
+    name: 'Nonogram',
+    tagline: 'Numbers in, picture out',
+    icon: Icons.blur_linear,
+    colour: Color(0xFF8E24AA),
+    howToPlay: [
+      HowToStep(
+        icon: Icons.numbers,
+        text: 'Numbers beside a line say how many squares to fill, in order.',
+      ),
+      HowToStep(
+        icon: Icons.space_bar,
+        text: '"3 1" means three filled, a gap, then one filled.',
+      ),
+      HowToStep(
+        icon: Icons.touch_app,
+        text: 'Tap to fill, tap again to mark it empty, again to clear.',
+      ),
+      HowToStep(
+        icon: Icons.psychology,
+        text: 'Every puzzle can be solved by logic alone. No guessing.',
+      ),
+    ],
+    levels: [
+      GameLevel(
+        label: '5×5',
+        detail: 'A coffee break',
+        definition: NonogramDefinition.small,
+      ),
+      GameLevel(
+        label: '10×10',
+        detail: 'A proper sitting',
+        definition: NonogramDefinition(),
+      ),
+    ],
+  ),
+  CatalogueEntry(
+    name: 'Memory Match',
+    tagline: 'Find every pair',
+    icon: Icons.style_outlined,
+    colour: Color(0xFFD81B60),
+    howToPlay: [
+      HowToStep(
+        icon: Icons.touch_app,
+        text: 'Turn over two cards.',
+      ),
+      HowToStep(
+        icon: Icons.compare_arrows,
+        text: 'Matching pair? It stays face up. Otherwise both turn back.',
+      ),
+      HowToStep(
+        icon: Icons.psychology_alt,
+        text: 'Remember where things were. Clear the board in the fewest turns.',
+      ),
+    ],
+    levels: [
+      GameLevel(
+        label: 'Quick',
+        detail: 'Six pairs',
+        definition: MemoryMatchDefinition(pairs: 6, columns: 3),
+      ),
+      GameLevel(
+        label: 'Standard',
+        detail: 'Eight pairs',
+        definition: MemoryMatchDefinition(),
+      ),
+    ],
+  ),
+  CatalogueEntry(
+    name: 'Sliding Puzzle',
+    tagline: 'Get the tiles back in order',
+    icon: Icons.apps,
+    colour: Color(0xFF00897B),
+    howToPlay: [
+      HowToStep(
+        icon: Icons.touch_app,
+        text: 'Tap a tile next to the gap and it slides across.',
+      ),
+      HowToStep(
+        icon: Icons.sort,
+        text: 'Put the numbers back in order, gap at the end.',
+      ),
+      HowToStep(
+        icon: Icons.verified,
+        text: 'Every shuffle can be solved. Fewer moves is better.',
+      ),
+    ],
+    levels: [
+      GameLevel(
+        label: 'Eight',
+        detail: '3×3 — the gentler one',
+        definition: SlidingPuzzleDefinition(boardSize: 3),
+      ),
+      GameLevel(
+        label: 'Fifteen',
+        detail: '4×4 — the classic',
+        definition: SlidingPuzzleDefinition(),
+      ),
+    ],
+  ),
+  CatalogueEntry(
     name: 'Dots & Boxes',
     tagline: 'Close more boxes than the computer',
     icon: Icons.border_all,
+    colour: Color(0xFF43A047),
+    howToPlay: [
+      HowToStep(
+        icon: Icons.linear_scale,
+        text: 'Take turns drawing one line between two dots.',
+      ),
+      HowToStep(
+        icon: Icons.check_box,
+        text: 'Draw a box\'s fourth side and you claim it.',
+      ),
+      HowToStep(
+        icon: Icons.replay,
+        text: 'Claim a box and you go again. Chains are where games are won.',
+      ),
+    ],
+    levels: [
+      GameLevel(
+        label: 'Gentle',
+        detail: '3×3 grid, easier opponent',
+        definition: DotsAndBoxesDefinition(
+          rows: 3,
+          columns: 3,
+          level: DotsAiLevel.easy,
+        ),
+      ),
+      GameLevel(
+        label: 'Standard',
+        detail: '4×4 grid',
+        definition: DotsAndBoxesDefinition(),
+      ),
+    ],
   ),
   CatalogueEntry(
-    definition: DotsAndBoxesDefinition(rows: 3, columns: 3, level: DotsAiLevel.easy),
-    name: 'Dots & Boxes · Gentle',
-    tagline: 'A smaller grid and an easier opponent',
-    icon: Icons.border_outer,
-  ),
-  CatalogueEntry(
-    definition: ReactionDefinition(),
     name: 'Reaction',
-    tagline: 'Tap the moment it turns green',
+    tagline: 'How fast are you, really?',
     icon: Icons.bolt,
-  ),
-  CatalogueEntry(
-    definition: SolitaireDefinition(),
-    name: 'Solitaire',
-    tagline: 'Klondike, one card at a time',
-    icon: Icons.style_rounded,
-  ),
-  CatalogueEntry(
-    definition: SolitaireDefinition.drawThree,
-    name: 'Solitaire · Draw Three',
-    tagline: 'The traditional rule, and the harder one',
-    icon: Icons.filter_3,
-  ),
-  CatalogueEntry(
-    definition: SudokuDefinition(difficulty: SudokuDifficulty.easy),
-    name: 'Sudoku · Easy',
-    tagline: 'Forty-two givens and room to breathe',
-    icon: Icons.calculate_outlined,
-  ),
-  CatalogueEntry(
-    definition: SudokuDefinition(),
-    name: 'Sudoku',
-    tagline: 'The standard grid, with notes and hints',
-    icon: Icons.calculate,
-  ),
-  CatalogueEntry(
-    definition: SudokuDefinition(difficulty: SudokuDifficulty.hard),
-    name: 'Sudoku · Hard',
-    tagline: 'Twenty-eight givens. Bring pencil marks',
-    icon: Icons.functions,
-  ),
-  CatalogueEntry(
-    definition: NonogramDefinition.small,
-    name: 'Nonogram · Five',
-    tagline: 'Picross for a coffee break',
-    icon: Icons.blur_linear,
-  ),
-  CatalogueEntry(
-    definition: NonogramDefinition(),
-    name: 'Nonogram',
-    tagline: 'Ten by ten. Read the numbers, fill the picture',
-    icon: Icons.blur_on,
-  ),
-  CatalogueEntry(
-    definition: WordSearchDefinition(),
-    name: 'Word Search',
-    tagline: 'Drag across the hidden words',
-    icon: Icons.search,
-  ),
-  CatalogueEntry(
-    definition: WordSearchDefinition.large,
-    name: 'Word Search · Long Haul',
-    tagline: 'Twelve by twelve, twelve words',
-    icon: Icons.manage_search,
+    colour: Color(0xFFF9A825),
+    howToPlay: [
+      HowToStep(
+        icon: Icons.hourglass_empty,
+        text: 'Tap to start, then wait. The screen turns green when it wants to.',
+      ),
+      HowToStep(
+        icon: Icons.flash_on,
+        text: 'Tap the instant it does. Faster scores higher.',
+      ),
+      HowToStep(
+        icon: Icons.block,
+        text: 'Tap too early and the round is gone. Patience counts.',
+      ),
+    ],
+    levels: [
+      GameLevel(
+        label: '5 rounds',
+        detail: 'About a minute',
+        definition: ReactionDefinition(),
+      ),
+      GameLevel(
+        label: '10 rounds',
+        detail: 'A steadier average',
+        definition: ReactionDefinition(rounds: 10),
+      ),
+    ],
   ),
 ];

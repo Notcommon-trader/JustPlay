@@ -223,7 +223,19 @@ class _Cell extends StatelessWidget {
               ? scheme.errorContainer
               : revealed
                   ? scheme.surfaceContainerHighest
-                  : scheme.primaryContainer,
+                  // A hint of the game's colour, not a bath in it.
+                  //
+                  // This was primaryContainer, which was a soft lavender under
+                  // the old single indigo theme. Once each game seeded its own
+                  // colour, an 81-cell grid of primaryContainer became a wall of
+                  // saturated red — louder than the old grey, and no more
+                  // readable. Large areas take a tint; the accent belongs on the
+                  // small things the player is actually meant to look at.
+                  : Color.lerp(
+                      scheme.surfaceContainerHighest,
+                      scheme.primary,
+                      0.22,
+                    )!,
           borderRadius: JpRadius.xs,
         ),
         child: Center(

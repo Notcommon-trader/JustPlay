@@ -1,16 +1,26 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:jp_framework/jp_framework.dart';
 import 'package:jp_ui/jp_ui.dart';
 
 import 'catalogue.dart';
-import 'main.dart';
+import 'game_sheet.dart';
 
-/// The game list.
+/// The game grid.
 ///
-/// Built to stay legible from three games to thirty: a scrolling list of cards
-/// rather than a fixed grid, so adding entries never requires a layout rethink.
+/// A two-column grid of coloured tiles, not a list of rows. Three reasons, all
+/// from playing the previous version on a phone:
+///
+/// **Ten fit where twenty-one did not.** Variants moved inside their game, so
+/// the whole catalogue is now two thumb-scrolls rather than five, and no game
+/// goes unnoticed at the bottom.
+///
+/// **Colour is what makes it read as a game.** Every row used to be the same
+/// grey card with the same indigo icon, which looked like a settings screen and
+/// was described, accurately, as boring. Each game now owns a colour and carries
+/// it into its own board.
+///
+/// **A tile is a target, a row is a line of text.** Big, obviously-tappable
+/// blocks suit a game; dense rows suit a directory.
 class HomeScreen extends StatelessWidget {
   const HomeScreen({required this.entries, super.key});
 
@@ -19,6 +29,7 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final records = GameRecordScope.of(context);
 
     return Scaffold(
       body: SafeArea(
@@ -28,17 +39,17 @@ class HomeScreen extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(
                   JpSpace.lg,
-                  JpSpace.xxl,
+                  JpSpace.xl,
                   JpSpace.lg,
                   JpSpace.lg,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('JustPlay', style: theme.textTheme.displayMedium),
-                    const SizedBox(height: JpSpace.xs),
+                    Text('JustPlay', style: theme.textTheme.displaySmall),
+                    const SizedBox(height: JpSpace.xxs),
                     Text(
-                      'A few minutes to spare?',
+                      'Ten games. A few minutes or a few hours.',
                       style: theme.textTheme.bodyLarge?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -54,23 +65,27 @@ class HomeScreen extends StatelessWidget {
                 JpSpace.lg,
                 JpSpace.xxl,
               ),
-              sliver: SliverList.separated(
-                itemCount: entries.length,
-                separatorBuilder: (_, _) => const SizedBox(height: JpSpace.md),
-                itemBuilder: (context, index) => _GameCard(
-                  entry: entries[index],
-                  // Watched, not read: finishing a game notifies the store, and
-                  // the new best is on the card before the player is back here.
-                  record: GameRecordScope.of(context)
-                      .recordFor(entries[index].definition.id),
-                  // Staggered entry. Each card is delayed a little more than the
-                  // one above, so the list assembles itself instead of appearing
-                  // all at once — the cheapest way to make a list feel crafted.
-                  //
-                  // Capped: past the first screenful the delay is buying nothing
-                  // (nobody is looking at card 20 on launch) and would make a
-                  // card scrolled into view sit blank for over a second.
-                  delay: Duration(milliseconds: 60 * (index > 6 ? 0 : index)),
+              sliver: SliverGrid(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: JpSpace.md,
+                  crossAxisSpacing: JpSpace.md,
+                  childAspectRatio: 0.92,
+                ),
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    final entry = entries[index];
+                    return _GameTile(
+                      entry: entry,
+                      // Best across every level of the game, so a tile can say
+                      // "you have played this" without picking a level first.
+                      hasPlayed: entry.levels.any(
+                        (level) => records.recordFor(level.definition.id).hasBeenPlayed,
+                      ),
+                      delay: Duration(milliseconds: 40 * index),
+                    );
+                  },
+                  childCount: entries.length,
                 ),
               ),
             ),
@@ -81,186 +96,127 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-class _GameCard extends StatefulWidget {
-  const _GameCard({
+class _GameTile extends StatefulWidget {
+  const _GameTile({
     required this.entry,
-    required this.record,
+    required this.hasPlayed,
     required this.delay,
   });
 
   final CatalogueEntry entry;
-  final GameRecord record;
+  final bool hasPlayed;
   final Duration delay;
 
   @override
-  State<_GameCard> createState() => _GameCardState();
+  State<_GameTile> createState() => _GameTileState();
 }
 
-class _GameCardState extends State<_GameCard> {
+class _GameTileState extends State<_GameTile> {
   bool _visible = false;
   bool _pressed = false;
-  Timer? _entrance;
 
   @override
   void initState() {
     super.initState();
-
-    if (widget.delay == Duration.zero) {
-      _visible = true;
-      return;
-    }
-
-    // A Timer held in state rather than a bare Future.delayed. The first version
-    // used the latter and outlived its widget: scrolling the list disposed cards
-    // whose callback was still queued, which a `mounted` check makes harmless in
-    // the app but leaves as a pending timer that fails any test touching this
-    // screen.
-    _entrance = Timer(widget.delay, () {
+    Future<void>.delayed(widget.delay, () {
       if (mounted) setState(() => _visible = true);
     });
   }
 
   @override
-  void dispose() {
-    _entrance?.cancel();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
+    final entry = widget.entry;
+
+    // A gradient rather than a flat fill. One colour reads as a category chip;
+    // two reads as a surface with light falling on it, which is the difference
+    // between a form control and something that looks made.
+    final dark = Color.lerp(entry.colour, Colors.black, 0.28)!;
 
     return AnimatedOpacity(
       opacity: _visible ? 1 : 0,
       duration: JpDuration.normal,
       curve: JpCurve.enter,
       child: AnimatedSlide(
-        offset: _visible ? Offset.zero : const Offset(0, 0.12),
+        offset: _visible ? Offset.zero : const Offset(0, 0.1),
         duration: JpDuration.normal,
         curve: JpCurve.enter,
-        child: Listener(
-          onPointerDown: (_) => setState(() => _pressed = true),
-          onPointerUp: (_) => setState(() => _pressed = false),
-          onPointerCancel: (_) => setState(() => _pressed = false),
-          child: GestureDetector(
-            onTapCancel: () => setState(() => _pressed = false),
-            onTap: () => openGame(context, widget.entry),
-            child: AnimatedScale(
-              scale: _pressed ? 0.98 : 1,
-              duration: JpDuration.instant,
-              curve: JpCurve.standard,
-              child: Container(
-                padding: const EdgeInsets.all(JpSpace.lg),
-                decoration: BoxDecoration(
-                  // High, not Low. On a phone the cards were a single tone off
-                  // the page and the list read as unseparated text — the first
-                  // screen anyone sees, looking like nothing had been designed.
-                  color: scheme.surfaceContainerHigh,
-                  borderRadius: JpRadius.md,
-                  boxShadow: JpElevation.low(scheme.shadow),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 52,
-                      height: 52,
-                      decoration: BoxDecoration(
-                        color: scheme.primaryContainer,
-                        borderRadius: JpRadius.sm,
-                      ),
-                      child: Icon(
-                        widget.entry.icon,
-                        color: scheme.onPrimaryContainer,
-                        size: 28,
-                      ),
+        child: Semantics(
+          button: true,
+          label: '${entry.name}. ${entry.tagline}',
+          excludeSemantics: true,
+          onTap: () => showGameSheet(context, entry),
+          child: Listener(
+            onPointerDown: (_) => setState(() => _pressed = true),
+            onPointerUp: (_) => setState(() => _pressed = false),
+            onPointerCancel: (_) => setState(() => _pressed = false),
+            child: GestureDetector(
+              onTapCancel: () => setState(() => _pressed = false),
+              onTap: () => showGameSheet(context, entry),
+              child: AnimatedScale(
+                scale: _pressed ? 0.96 : 1,
+                duration: JpDuration.instant,
+                curve: JpCurve.standard,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [entry.colour, dark],
                     ),
-                    const SizedBox(width: JpSpace.lg),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(widget.entry.name, style: theme.textTheme.titleLarge),
-                          const SizedBox(height: JpSpace.xxs),
-                          Text(
-                            widget.entry.tagline,
-                            style: theme.textTheme.bodyMedium,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          if (widget.record.hasBeenPlayed) ...[
-                            const SizedBox(height: JpSpace.xs),
-                            _RecordLine(
-                              record: widget.record,
-                              showsScore:
-                                  widget.entry.definition.capabilities.showsScore,
-                            ),
+                    borderRadius: JpRadius.lg,
+                    boxShadow: JpElevation.medium(dark),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(JpSpace.lg),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(entry.icon, color: Colors.white, size: 34),
+                            const Spacer(),
+                            // A quiet mark, not a badge with a number. It says
+                            // "you have been here" and nothing more.
+                            if (widget.hasPlayed)
+                              const Icon(
+                                Icons.check_circle,
+                                color: Colors.white70,
+                                size: 18,
+                              ),
                           ],
-                        ],
-                      ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          entry.name,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: JpTextSize.title,
+                            fontWeight: FontWeight.w700,
+                            height: 1.1,
+                          ),
+                        ),
+                        const SizedBox(height: JpSpace.xxs),
+                        Text(
+                          entry.tagline,
+                          style: const TextStyle(
+                            // White at 85% rather than a second colour: on a
+                            // saturated tile any tinted grey reads as dirty.
+                            color: Colors.white,
+                            fontSize: JpTextSize.caption,
+                            height: 1.25,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: JpSpace.sm),
-                    Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
-                  ],
+                  ),
                 ),
               ),
             ),
           ),
         ),
       ),
-    );
-  }
-}
-
-/// One line of history under a game's tagline.
-///
-/// Shows the single most relevant number rather than everything known: a card
-/// listing plays, wins, best score, best time and last played is a spreadsheet,
-/// and nobody reads it. Games that keep score show the score; the rest show
-/// their fastest win, and a game played but never won falls back to how often it
-/// has been played.
-class _RecordLine extends StatelessWidget {
-  const _RecordLine({required this.record, required this.showsScore});
-
-  final GameRecord record;
-  final bool showsScore;
-
-  String get _label {
-    if (showsScore && record.bestScore > 0) return 'Best ${record.bestScore}';
-
-    final best = record.bestTime;
-    if (best != null) return 'Best ${_duration(best)}';
-
-    return record.plays == 1 ? 'Played once' : 'Played ${record.plays} times';
-  }
-
-  static String _duration(Duration d) {
-    final minutes = d.inMinutes;
-    final seconds = d.inSeconds % 60;
-    return minutes == 0 ? '${seconds}s' : '${minutes}m ${seconds}s';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(
-          Icons.emoji_events_outlined,
-          size: 14,
-          color: theme.colorScheme.primary,
-        ),
-        const SizedBox(width: JpSpace.xxs),
-        Text(
-          _label,
-          style: theme.textTheme.labelMedium?.copyWith(
-            color: theme.colorScheme.primary,
-          ),
-        ),
-      ],
     );
   }
 }

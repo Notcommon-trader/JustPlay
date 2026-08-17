@@ -43,21 +43,29 @@ class TimeKillerApp extends StatelessWidget {
   }
 }
 
-/// Opens a game inside the shell.
+/// Opens a game inside the shell, at [level].
 ///
 /// Routing lives here rather than in the catalogue so a game never knows how it
 /// was launched — the same definition can be opened from the home grid, a
 /// "continue playing" card, or a deep link without changing.
-void openGame(BuildContext context, CatalogueEntry entry) {
+void openGame(BuildContext context, CatalogueEntry entry, GameLevel level) {
   // Read, not watch: pushing a route from a callback must not also subscribe the
   // screen that is about to be covered.
   final records = GameRecordScope.read(context);
-  final gameId = entry.definition.id;
+  final gameId = level.definition.id;
+  final brightness = Theme.of(context).brightness;
 
   Navigator.of(context).push(
     MaterialPageRoute<void>(
-      builder: (context) => GameShell(
-        definition: entry.definition,
+      builder: (context) => Theme(
+        // The game's own colour, all the way to the board. Every screen in the
+        // previous build was the same indigo whatever you were playing, which is
+        // the single biggest reason it read as a tool rather than a game.
+        data: brightness == Brightness.dark
+            ? JpTheme.dark(seed: entry.colour)
+            : JpTheme.light(seed: entry.colour),
+        child: GameShell(
+        definition: level.definition,
         title: entry.name,
         bestScore: records.bestScoreFor(gameId),
         onFinished: (state) {
@@ -69,6 +77,7 @@ void openGame(BuildContext context, CatalogueEntry entry) {
           unawaited(records.recordSession(gameId, state));
         },
         onExit: () => Navigator.of(context).pop(),
+        ),
       ),
     ),
   );
