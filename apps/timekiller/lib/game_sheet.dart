@@ -3,6 +3,7 @@ import 'package:jp_framework/jp_framework.dart';
 import 'package:jp_ui/jp_ui.dart';
 
 import 'catalogue.dart';
+import 'how_to_demo.dart';
 import 'main.dart';
 
 /// Opens the sheet for [entry]: what the game is, how it is played, and at which
@@ -95,6 +96,13 @@ class _GameSheetState extends State<_GameSheet> {
 
               _SectionLabel('How to play', scheme: scheme),
               const SizedBox(height: JpSpace.sm),
+
+              // The animation first, and the words after. Written instructions
+              // get skipped — people look at a picture and try it — so the
+              // gesture is shown before it is described.
+              HowToDemo(script: entry.demo(scheme), accent: entry.colour),
+              const SizedBox(height: JpSpace.lg),
+
               for (final step in entry.howToPlay)
                 Padding(
                   padding: const EdgeInsets.only(bottom: JpSpace.md),

@@ -3,6 +3,9 @@ import 'package:jp_core/jp_core.dart';
 import 'package:jp_games/jp_games.dart';
 import 'package:jp_ui/jp_ui.dart';
 
+import 'how_to_demo.dart';
+import 'how_to_scripts.dart';
+
 /// One step of a game's rules, as a player would be told them out loud.
 ///
 /// An icon and a sentence, not a paragraph. Nobody reads a wall of rules on a
@@ -45,6 +48,7 @@ class CatalogueEntry {
     required this.tagline,
     required this.icon,
     required this.colour,
+    required this.demo,
     required this.howToPlay,
     required this.levels,
   });
@@ -62,6 +66,16 @@ class CatalogueEntry {
   /// hue, which is exactly how it read.
   final Color colour;
 
+  /// Builds the looping animation that shows how the game is played.
+  ///
+  /// A function of the scheme rather than a fixed script, so a demo picks up its
+  /// game's accent the same way the board does.
+  ///
+  /// This carries the explaining. Written instructions get skipped — people look
+  /// at a picture and then try it — so the demo runs first and the text below it
+  /// is for anyone who wants the detail.
+  final DemoScript Function(ColorScheme scheme) demo;
+
   final List<HowToStep> howToPlay;
   final List<GameLevel> levels;
 
@@ -77,6 +91,7 @@ const List<CatalogueEntry> appCatalogue = [
     tagline: 'Fill the grid, one to nine',
     icon: Icons.grid_on,
     colour: Color(0xFF1E88E5),
+    demo: HowToScripts.sudoku,
     howToPlay: [
       HowToStep(
         icon: Icons.looks_one,
@@ -85,14 +100,6 @@ const List<CatalogueEntry> appCatalogue = [
       HowToStep(
         icon: Icons.touch_app,
         text: 'Tap a square, then tap a number. Tap it again to clear it.',
-      ),
-      HowToStep(
-        icon: Icons.edit_note,
-        text: 'Notes let you pencil in maybes. Hint fills one square in.',
-      ),
-      HowToStep(
-        icon: Icons.verified,
-        text: 'Every puzzle has exactly one answer. You never have to guess.',
       ),
     ],
     levels: [
@@ -118,6 +125,7 @@ const List<CatalogueEntry> appCatalogue = [
     tagline: 'Klondike, the way you remember it',
     icon: Icons.style,
     colour: Color(0xFF2E7D32),
+    demo: HowToScripts.solitaire,
     howToPlay: [
       HowToStep(
         icon: Icons.swap_vert,
@@ -127,14 +135,6 @@ const List<CatalogueEntry> appCatalogue = [
         icon: Icons.drag_indicator,
         text: 'Down the board, stack cards in falling order, alternating red '
             'and black.',
-      ),
-      HowToStep(
-        icon: Icons.touch_app,
-        text: 'Drag a card, or just tap it and it goes where it can.',
-      ),
-      HowToStep(
-        icon: Icons.refresh,
-        text: 'Tap the deck for a new card. Empty spaces take a king.',
       ),
     ],
     levels: [
@@ -155,6 +155,7 @@ const List<CatalogueEntry> appCatalogue = [
     tagline: 'Slide, merge, and keep going',
     icon: Icons.dialpad,
     colour: Color(0xFFF57C00),
+    demo: HowToScripts.game2048,
     howToPlay: [
       HowToStep(
         icon: Icons.swipe,
@@ -163,14 +164,6 @@ const List<CatalogueEntry> appCatalogue = [
       HowToStep(
         icon: Icons.merge_type,
         text: 'Two matching tiles that touch become one, worth double.',
-      ),
-      HowToStep(
-        icon: Icons.add_box,
-        text: 'A new tile appears after every move. Fill the board and it ends.',
-      ),
-      HowToStep(
-        icon: Icons.emoji_events,
-        text: 'Reach 2048. Then find out how much further you can push it.',
       ),
     ],
     levels: [
@@ -196,6 +189,7 @@ const List<CatalogueEntry> appCatalogue = [
     tagline: 'Clear the board, avoid the mines',
     icon: Icons.flag,
     colour: Color(0xFFE53935),
+    demo: HowToScripts.minesweeper,
     howToPlay: [
       HowToStep(
         icon: Icons.touch_app,
@@ -204,14 +198,6 @@ const List<CatalogueEntry> appCatalogue = [
       HowToStep(
         icon: Icons.pin,
         text: 'A number says how many mines touch that square.',
-      ),
-      HowToStep(
-        icon: Icons.flag,
-        text: 'Press and hold to plant a flag where you think a mine is.',
-      ),
-      HowToStep(
-        icon: Icons.check_circle,
-        text: 'Open every square that is not a mine to win.',
       ),
     ],
     levels: [
@@ -232,6 +218,7 @@ const List<CatalogueEntry> appCatalogue = [
     tagline: 'Find the hidden words',
     icon: Icons.search,
     colour: Color(0xFF00ACC1),
+    demo: HowToScripts.wordSearch,
     howToPlay: [
       HowToStep(
         icon: Icons.list_alt,
@@ -240,14 +227,6 @@ const List<CatalogueEntry> appCatalogue = [
       HowToStep(
         icon: Icons.swipe,
         text: 'Drag from the first letter to the last to select a word.',
-      ),
-      HowToStep(
-        icon: Icons.open_with,
-        text: 'Words run in any of eight directions — including backwards.',
-      ),
-      HowToStep(
-        icon: Icons.done_all,
-        text: 'Find them all. A wrong drag costs you nothing.',
       ),
     ],
     levels: [
@@ -268,6 +247,7 @@ const List<CatalogueEntry> appCatalogue = [
     tagline: 'Numbers in, picture out',
     icon: Icons.blur_linear,
     colour: Color(0xFF8E24AA),
+    demo: HowToScripts.nonogram,
     howToPlay: [
       HowToStep(
         icon: Icons.numbers,
@@ -276,14 +256,6 @@ const List<CatalogueEntry> appCatalogue = [
       HowToStep(
         icon: Icons.space_bar,
         text: '"3 1" means three filled, a gap, then one filled.',
-      ),
-      HowToStep(
-        icon: Icons.touch_app,
-        text: 'Tap to fill, tap again to mark it empty, again to clear.',
-      ),
-      HowToStep(
-        icon: Icons.psychology,
-        text: 'Every puzzle can be solved by logic alone. No guessing.',
       ),
     ],
     levels: [
@@ -304,6 +276,7 @@ const List<CatalogueEntry> appCatalogue = [
     tagline: 'Find every pair',
     icon: Icons.style_outlined,
     colour: Color(0xFFD81B60),
+    demo: HowToScripts.memory,
     howToPlay: [
       HowToStep(
         icon: Icons.touch_app,
@@ -312,10 +285,6 @@ const List<CatalogueEntry> appCatalogue = [
       HowToStep(
         icon: Icons.compare_arrows,
         text: 'Matching pair? It stays face up. Otherwise both turn back.',
-      ),
-      HowToStep(
-        icon: Icons.psychology_alt,
-        text: 'Remember where things were. Clear the board in the fewest turns.',
       ),
     ],
     levels: [
@@ -336,6 +305,7 @@ const List<CatalogueEntry> appCatalogue = [
     tagline: 'Get the tiles back in order',
     icon: Icons.apps,
     colour: Color(0xFF00897B),
+    demo: HowToScripts.slidingPuzzle,
     howToPlay: [
       HowToStep(
         icon: Icons.touch_app,
@@ -344,10 +314,6 @@ const List<CatalogueEntry> appCatalogue = [
       HowToStep(
         icon: Icons.sort,
         text: 'Put the numbers back in order, gap at the end.',
-      ),
-      HowToStep(
-        icon: Icons.verified,
-        text: 'Every shuffle can be solved. Fewer moves is better.',
       ),
     ],
     levels: [
@@ -368,6 +334,7 @@ const List<CatalogueEntry> appCatalogue = [
     tagline: 'Close more boxes than the computer',
     icon: Icons.border_all,
     colour: Color(0xFF43A047),
+    demo: HowToScripts.dotsAndBoxes,
     howToPlay: [
       HowToStep(
         icon: Icons.linear_scale,
@@ -376,10 +343,6 @@ const List<CatalogueEntry> appCatalogue = [
       HowToStep(
         icon: Icons.check_box,
         text: 'Draw a box\'s fourth side and you claim it.',
-      ),
-      HowToStep(
-        icon: Icons.replay,
-        text: 'Claim a box and you go again. Chains are where games are won.',
       ),
     ],
     levels: [
@@ -404,6 +367,7 @@ const List<CatalogueEntry> appCatalogue = [
     tagline: 'How fast are you, really?',
     icon: Icons.bolt,
     colour: Color(0xFFF9A825),
+    demo: HowToScripts.reaction,
     howToPlay: [
       HowToStep(
         icon: Icons.hourglass_empty,
@@ -412,10 +376,6 @@ const List<CatalogueEntry> appCatalogue = [
       HowToStep(
         icon: Icons.flash_on,
         text: 'Tap the instant it does. Faster scores higher.',
-      ),
-      HowToStep(
-        icon: Icons.block,
-        text: 'Tap too early and the round is gone. Patience counts.',
       ),
     ],
     levels: [
