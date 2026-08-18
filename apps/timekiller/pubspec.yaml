@@ -4,7 +4,11 @@ publish_to: none
 
 # version: <marketing>+<build number>. The build number must increase on every
 # store upload; both stores reject a re-used one.
-version: 0.1.0+1
+# The number after `+` is the Android versionCode. It must increase on every
+# build anyone installs: with it unchanged, an installer can treat a new APK as
+# the same app and quietly keep the old one, which is indistinguishable from the
+# changes never having been made.
+version: 0.2.0+2
 
 environment:
   sdk: ^3.12.0
