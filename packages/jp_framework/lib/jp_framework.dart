@@ -9,5 +9,6 @@ library;
 export 'src/records/game_record.dart';
 export 'src/records/game_record_scope.dart';
 export 'src/records/game_record_store.dart';
+export 'src/records/journey_progress.dart';
 export 'src/storage/key_value_store.dart';
 export 'src/storage/prefs_key_value_store.dart';

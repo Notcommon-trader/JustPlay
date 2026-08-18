@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:jp_core/jp_core.dart';
 import 'package:jp_framework/jp_framework.dart';
 import 'package:jp_ui/jp_ui.dart';
 
 import 'catalogue.dart';
 import 'game_sheet.dart';
+import 'journey/stage_definitions.dart';
+import 'main.dart';
 
 /// The game grid.
 ///
@@ -54,6 +57,17 @@ class HomeScreen extends StatelessWidget {
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
+                    const SizedBox(height: JpSpace.lg),
+                    const _JourneyCard(),
+                    const SizedBox(height: JpSpace.lg),
+                    Text(
+                      'OR PICK ONE',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        letterSpacing: 1.2,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -90,6 +104,121 @@ class HomeScreen extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The Journey, given the top of the screen and the biggest target on it.
+///
+/// This is the answer to "what do I play?", which is the question the grid asks
+/// and never answers. A player who has to choose between ten tiles after every
+/// round has ten chances to decide they are done instead.
+class _JourneyCard extends StatelessWidget {
+  const _JourneyCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final journey = JourneyScope.of(context);
+
+    final stage = Journey.stageAt(journey.stage);
+
+    return Semantics(
+      button: true,
+      label: journey.hasStarted
+          ? 'Continue the journey, stage ${journey.stage}'
+          : 'Start the journey',
+      excludeSemantics: true,
+      onTap: () => openJourney(context),
+      child: GestureDetector(
+        onTap: () => openJourney(context),
+        child: Container(
+          padding: const EdgeInsets.all(JpSpace.lg),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [scheme.primary, scheme.tertiary],
+            ),
+            borderRadius: JpRadius.lg,
+            boxShadow: JpElevation.medium(scheme.shadow),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      journey.hasStarted ? 'CONTINUE' : 'START HERE',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: JpTextSize.caption,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: JpSpace.xxs),
+                    Text(
+                      'Stage ${journey.stage}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: JpTextSize.headline,
+                        fontWeight: FontWeight.w800,
+                        height: 1.1,
+                      ),
+                    ),
+                    const SizedBox(height: JpSpace.xxs),
+                    // Naming what is next turns an abstract button into a
+                    // specific, small, obviously-doable thing.
+                    Text(
+                      '${stageGameName(stage.game)} · ${stage.goal.describe}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: JpTextSize.label,
+                      ),
+                    ),
+                    if (journey.stars > 0) ...[
+                      const SizedBox(height: JpSpace.xs),
+                      Row(
+                        children: [
+                          const Icon(Icons.star_rounded,
+                              color: Colors.white70, size: 16),
+                          const SizedBox(width: JpSpace.xxs),
+                          Text(
+                            '${journey.stars}',
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: JpTextSize.caption,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: JpSpace.md),
+              Container(
+                width: 56,
+                height: 56,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.play_arrow_rounded,
+                  color: scheme.primary,
+                  size: 34,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

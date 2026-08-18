@@ -8,41 +8,75 @@ import 'catalogue.dart';
 import 'first_play_coach.dart';
 import 'game_theme.dart';
 import 'home_screen.dart';
+import 'journey/journey_screen.dart';
 
 Future<void> main() async {
   // Required before touching any plugin, and shared_preferences is one.
   WidgetsFlutterBinding.ensureInitialized();
 
-  final records = GameRecordStore(store: PrefsKeyValueStore());
-  // Loaded before the first frame. Records are a few hundred bytes, so this is
-  // imperceptible — and it means the home screen never renders a best score of
-  // zero and then corrects itself a frame later.
-  await records.load();
+  // One store behind both: records and journey progress are different kinds of
+  // fact, but they live on the same disk.
+  final store = PrefsKeyValueStore();
+  final records = GameRecordStore(store: store);
+  final journey = JourneyProgress(store: store);
 
-  runApp(TimeKillerApp(records: records));
+  // Loaded before the first frame. Both are a few hundred bytes, so this is
+  // imperceptible — and it means the home screen never renders "Stage 1" and
+  // then corrects itself to stage 40 a frame later.
+  await records.load();
+  await journey.load();
+
+  runApp(TimeKillerApp(records: records, journey: journey));
 }
 
 class TimeKillerApp extends StatelessWidget {
-  const TimeKillerApp({required this.records, super.key});
+  const TimeKillerApp({required this.records, this.journey, super.key});
 
   final GameRecordStore records;
 
+  /// Null in tests that only care about records. A run that has never been
+  /// started is the correct default rather than a reason to fail.
+  final JourneyProgress? journey;
+
   @override
   Widget build(BuildContext context) {
+    final progress = journey ?? JourneyProgress(store: InMemoryKeyValueStore());
+
     return GameRecordScope(
       store: records,
-      child: MaterialApp(
-        title: 'JustPlay',
-        debugShowCheckedModeBanner: false,
-        theme: JpTheme.light(),
-        darkTheme: JpTheme.dark(),
-        // Follows the device. Dark mode is not a setting people go looking for —
-        // it is an expectation that the app already matches the system.
-        themeMode: ThemeMode.system,
-        home: const HomeScreen(entries: appCatalogue),
+      child: JourneyScope(
+        progress: progress,
+        child: MaterialApp(
+          title: 'JustPlay',
+          debugShowCheckedModeBanner: false,
+          theme: JpTheme.light(),
+          darkTheme: JpTheme.dark(),
+          // Follows the device. Dark mode is not a setting people go looking
+          // for — it is an expectation that the app already matches the system.
+          themeMode: ThemeMode.system,
+          home: const HomeScreen(entries: appCatalogue),
+        ),
       ),
     );
   }
+}
+
+/// Starts or resumes the Journey.
+///
+/// Pushed full-screen with no title bar of its own: the run owns the whole
+/// screen, and the only way out is the close button in its header.
+void openJourney(BuildContext context) {
+  final journey = JourneyScope.read(context);
+
+  Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      builder: (context) => JourneyScreen(
+        startAt: journey.stage,
+        onStageReached: (stage, stars) =>
+            unawaited(journey.recordCleared(stage, stars)),
+      ),
+    ),
+  );
 }
 
 /// Opens a game inside the shell, at [level].
