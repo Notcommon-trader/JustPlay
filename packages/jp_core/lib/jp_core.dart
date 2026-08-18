@@ -6,6 +6,7 @@
 library;
 
 export 'src/games/dots_and_boxes/dots_and_boxes.dart';
+export 'src/journey/journey.dart';
 export 'src/games/game_2048/board_2048.dart';
 export 'src/games/memory_match/memory_board.dart';
 export 'src/games/minesweeper/minesweeper_board.dart';
