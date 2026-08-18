@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:jp_core/jp_core.dart';
+import 'package:jp_framework/jp_framework.dart';
 import 'package:jp_ui/jp_ui.dart';
 
 import '../game_theme.dart';
@@ -16,11 +19,16 @@ class JourneyScreen extends StatefulWidget {
   const JourneyScreen({
     required this.startAt,
     this.onStageReached,
+    this.sounds,
     super.key,
   });
 
   /// Where to resume. 1 for a new run.
   final int startAt;
+
+  /// Null in tests, which run silent. A missing sound service must never be a
+  /// reason for a game not to work.
+  final SoundService? sounds;
 
   /// Called as each stage begins, so progress can be saved.
   final void Function(int stageNumber, int stars)? onStageReached;
@@ -125,6 +133,25 @@ class _JourneyScreenState extends State<JourneyScreen> {
       _passed = passed;
       _stars = stars;
     });
+
+    final sounds = widget.sounds;
+    if (sounds == null) return;
+
+    sounds.play(passed ? Sfx.win : Sfx.lose);
+
+    // Stars land one at a time, after the win chord rather than under it. A
+    // reward arriving in pieces reads as more than the same reward arriving at
+    // once — it is the cheapest trick in the genre and it works.
+    for (var i = 0; i < stars; i++) {
+      unawaited(
+        Future<void>.delayed(
+          Duration(milliseconds: 420 + i * 160),
+          () {
+            if (mounted) sounds.play(Sfx.star);
+          },
+        ),
+      );
+    }
   }
 
   void _next() {

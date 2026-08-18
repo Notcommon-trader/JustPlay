@@ -6,6 +6,8 @@
 /// directly.
 library;
 
+export 'src/audio/sound_service.dart';
+export 'src/audio/tone.dart';
 export 'src/records/game_record.dart';
 export 'src/records/game_record_scope.dart';
 export 'src/records/game_record_store.dart';

@@ -26,17 +26,30 @@ Future<void> main() async {
   await records.load();
   await journey.load();
 
-  runApp(TimeKillerApp(records: records, journey: journey));
+  // Not awaited: sound is the least important thing on screen, and a device that
+  // is slow to hand over an audio route must not delay the first frame.
+  final sounds = ToneSounds();
+  unawaited(sounds.initialise());
+
+  runApp(TimeKillerApp(records: records, journey: journey, sounds: sounds));
 }
 
 class TimeKillerApp extends StatelessWidget {
-  const TimeKillerApp({required this.records, this.journey, super.key});
+  const TimeKillerApp({
+    required this.records,
+    this.journey,
+    this.sounds,
+    super.key,
+  });
 
   final GameRecordStore records;
 
   /// Null in tests that only care about records. A run that has never been
   /// started is the correct default rather than a reason to fail.
   final JourneyProgress? journey;
+
+  /// Null in tests, which run silent.
+  final SoundService? sounds;
 
   @override
   Widget build(BuildContext context) {
@@ -46,7 +59,9 @@ class TimeKillerApp extends StatelessWidget {
       store: records,
       child: JourneyScope(
         progress: progress,
-        child: MaterialApp(
+        child: SoundScope(
+          sounds: sounds ?? SilentSounds(),
+          child: MaterialApp(
           title: 'JustPlay',
           debugShowCheckedModeBanner: false,
           theme: JpTheme.light(),
@@ -54,11 +69,31 @@ class TimeKillerApp extends StatelessWidget {
           // Follows the device. Dark mode is not a setting people go looking
           // for — it is an expectation that the app already matches the system.
           themeMode: ThemeMode.system,
-          home: const HomeScreen(entries: appCatalogue),
+            home: const HomeScreen(entries: appCatalogue),
+          ),
         ),
       ),
     );
   }
+}
+
+/// Puts the app's [SoundService] in scope.
+///
+/// An InheritedWidget rather than a global: a test builds the app with
+/// [SilentSounds] and gets silence everywhere, with no static to reset between
+/// tests and no way for one test to leak audio into the next.
+class SoundScope extends InheritedWidget {
+  const SoundScope({required this.sounds, required super.child, super.key});
+
+  final SoundService sounds;
+
+  static SoundService of(BuildContext context) {
+    final scope = context.getInheritedWidgetOfExactType<SoundScope>();
+    return scope?.sounds ?? SilentSounds();
+  }
+
+  @override
+  bool updateShouldNotify(SoundScope oldWidget) => oldWidget.sounds != sounds;
 }
 
 /// Starts or resumes the Journey.
@@ -67,11 +102,13 @@ class TimeKillerApp extends StatelessWidget {
 /// screen, and the only way out is the close button in its header.
 void openJourney(BuildContext context) {
   final journey = JourneyScope.read(context);
+  final sounds = SoundScope.of(context);
 
   Navigator.of(context).push(
     MaterialPageRoute<void>(
       builder: (context) => JourneyScreen(
         startAt: journey.stage,
+        sounds: sounds,
         onStageReached: (stage, stars) =>
             unawaited(journey.recordCleared(stage, stars)),
       ),
