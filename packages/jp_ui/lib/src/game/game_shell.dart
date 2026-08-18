@@ -15,6 +15,8 @@ class GameShell extends StatefulWidget {
   const GameShell({
     required this.definition,
     required this.title,
+    this.accent,
+    this.boardWrapper,
     this.bestScore = 0,
     this.onExit,
     this.onFinished,
@@ -26,6 +28,24 @@ class GameShell extends StatefulWidget {
   /// Resolved display name. The shell takes a resolved string rather than a
   /// localization key so it stays independent of any particular l10n package.
   final String title;
+
+  /// The game's identity colour, painted across the header.
+  ///
+  /// Without it the board inherits a themed app bar that is *near* the colour of
+  /// the tile the player just pressed but not the same, which reads as an
+  /// inconsistency rather than a transition. A solid header in the exact colour
+  /// makes the connection obvious. Null falls back to the ambient theme, so a
+  /// host that does not care about identity is unaffected.
+  final Color? accent;
+
+  /// Wraps the board, and only the board.
+  ///
+  /// Exists so an app can lay something over the playing area — a first-play
+  /// coach, a tutorial, a rewarded-ad prompt — without the shell knowing what it
+  /// is. Scoped to the board rather than the whole screen because anything
+  /// pointing at the game needs coordinates relative to the game, not to a
+  /// screen that also contains an app bar and a stat row.
+  final Widget Function(BuildContext context, Widget board)? boardWrapper;
 
   final int bestScore;
   final VoidCallback? onExit;
@@ -124,6 +144,9 @@ class _GameShellState extends State<GameShell> with WidgetsBindingObserver {
           },
           child: Scaffold(
           appBar: AppBar(
+            backgroundColor: widget.accent,
+            foregroundColor: widget.accent == null ? null : Colors.white,
+            elevation: 0,
             title: Text(widget.title),
             leading: IconButton(
               icon: const Icon(Icons.close),
@@ -155,7 +178,14 @@ class _GameShellState extends State<GameShell> with WidgetsBindingObserver {
                   child: Stack(
                     children: [
                       Positioned.fill(
-                        child: widget.definition.buildBoard(context, _session),
+                        child: Builder(
+                          builder: (context) {
+                            final board =
+                                widget.definition.buildBoard(context, _session);
+                            return widget.boardWrapper?.call(context, board) ??
+                                board;
+                          },
+                        ),
                       ),
                       // Overlays sit above the board rather than replacing it, so
                       // the player can still see the position they are returning

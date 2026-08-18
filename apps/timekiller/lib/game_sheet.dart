@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:jp_framework/jp_framework.dart';
 import 'package:jp_ui/jp_ui.dart';
 
 import 'catalogue.dart';
-import 'how_to_demo.dart';
+import 'game_theme.dart';
 import 'main.dart';
 
 /// Opens the sheet for [entry]: what the game is, how it is played, and at which
@@ -40,9 +40,9 @@ class _GameSheetState extends State<_GameSheet> {
   Widget build(BuildContext context) {
     final entry = widget.entry;
     final brightness = Theme.of(context).brightness;
-    final theme = brightness == Brightness.dark
-        ? JpTheme.dark(seed: entry.colour)
-        : JpTheme.light(seed: entry.colour);
+    // The same helper the board uses, so the colour the player saw on the tile
+    // is the colour here and the colour there.
+    final theme = gameTheme(entry.colour, brightness);
     final scheme = theme.colorScheme;
 
     final records = GameRecordScope.of(context);
@@ -97,12 +97,11 @@ class _GameSheetState extends State<_GameSheet> {
               _SectionLabel('How to play', scheme: scheme),
               const SizedBox(height: JpSpace.sm),
 
-              // The animation first, and the words after. Written instructions
-              // get skipped — people look at a picture and try it — so the
-              // gesture is shown before it is described.
-              HowToDemo(script: entry.demo(scheme), accent: entry.colour),
-              const SizedBox(height: JpSpace.lg),
-
+              // Text only, deliberately. The gesture is now shown on the real
+              // board the first time the game is opened, which is where a person
+              // can act on it — a looping animation here was something to watch
+              // on the way past. These lines stay as the reference for anyone
+              // who wants the rules spelled out.
               for (final step in entry.howToPlay)
                 Padding(
                   padding: const EdgeInsets.only(bottom: JpSpace.md),

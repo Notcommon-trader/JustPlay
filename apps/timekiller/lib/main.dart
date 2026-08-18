@@ -5,6 +5,8 @@ import 'package:jp_framework/jp_framework.dart';
 import 'package:jp_ui/jp_ui.dart';
 
 import 'catalogue.dart';
+import 'first_play_coach.dart';
+import 'game_theme.dart';
 import 'home_screen.dart';
 
 Future<void> main() async {
@@ -58,13 +60,23 @@ void openGame(BuildContext context, CatalogueEntry entry, GameLevel level) {
   Navigator.of(context).push(
     MaterialPageRoute<void>(
       builder: (context) => Theme(
-        // The game's own colour, all the way to the board. Every screen in the
-        // previous build was the same indigo whatever you were playing, which is
-        // the single biggest reason it read as a tool rather than a game.
-        data: brightness == Brightness.dark
-            ? JpTheme.dark(seed: entry.colour)
-            : JpTheme.light(seed: entry.colour),
+        // The game's own colour, all the way to the board — and the *same*
+        // colour, not a palette's interpretation of it. See gameTheme.
+        data: gameTheme(entry.colour, brightness),
         child: GameShell(
+        accent: gameColourFor(
+          entry.colour,
+          gameTheme(entry.colour, brightness).colorScheme,
+          brightness,
+        ),
+        // Only on a game nobody has played. Someone who already knows sudoku
+        // should never meet a tutorial, and `plays` is exactly that knowledge.
+        boardWrapper: (context, board) => FirstPlayCoach(
+          moves: entry.coachMoves,
+          accent: entry.colour,
+          enabled: !records.recordFor(gameId).hasBeenPlayed,
+          child: board,
+        ),
         definition: level.definition,
         title: entry.name,
         bestScore: records.bestScoreFor(gameId),

@@ -3,8 +3,8 @@ import 'package:jp_core/jp_core.dart';
 import 'package:jp_games/jp_games.dart';
 import 'package:jp_ui/jp_ui.dart';
 
-import 'how_to_demo.dart';
-import 'how_to_scripts.dart';
+import 'coach_moves.dart';
+import 'first_play_coach.dart';
 
 /// One step of a game's rules, as a player would be told them out loud.
 ///
@@ -48,7 +48,7 @@ class CatalogueEntry {
     required this.tagline,
     required this.icon,
     required this.colour,
-    required this.demo,
+    required this.coachMoves,
     required this.howToPlay,
     required this.levels,
   });
@@ -66,15 +66,14 @@ class CatalogueEntry {
   /// hue, which is exactly how it read.
   final Color colour;
 
-  /// Builds the looping animation that shows how the game is played.
+  /// Gestures the coach points out on the real board, the first time this game
+  /// is played.
   ///
-  /// A function of the scheme rather than a fixed script, so a demo picks up its
-  /// game's accent the same way the board does.
-  ///
-  /// This carries the explaining. Written instructions get skipped — people look
-  /// at a picture and then try it — so the demo runs first and the text below it
-  /// is for anyone who wants the detail.
-  final DemoScript Function(ColorScheme scheme) demo;
+  /// This carries the explaining now. It replaced a looping animation in the
+  /// game sheet, which sat on a different screen, before play, on a miniature of
+  /// a board — something to watch rather than something to do. The text below is
+  /// for anyone who wants the detail afterwards.
+  final List<CoachMove> coachMoves;
 
   final List<HowToStep> howToPlay;
   final List<GameLevel> levels;
@@ -91,7 +90,7 @@ const List<CatalogueEntry> appCatalogue = [
     tagline: 'Fill the grid, one to nine',
     icon: Icons.grid_on,
     colour: Color(0xFF1E88E5),
-    demo: HowToScripts.sudoku,
+    coachMoves: CoachMoves.sudoku,
     howToPlay: [
       HowToStep(
         icon: Icons.looks_one,
@@ -125,7 +124,7 @@ const List<CatalogueEntry> appCatalogue = [
     tagline: 'Klondike, the way you remember it',
     icon: Icons.style,
     colour: Color(0xFF2E7D32),
-    demo: HowToScripts.solitaire,
+    coachMoves: CoachMoves.solitaire,
     howToPlay: [
       HowToStep(
         icon: Icons.swap_vert,
@@ -155,7 +154,7 @@ const List<CatalogueEntry> appCatalogue = [
     tagline: 'Slide, merge, and keep going',
     icon: Icons.dialpad,
     colour: Color(0xFFF57C00),
-    demo: HowToScripts.game2048,
+    coachMoves: CoachMoves.game2048,
     howToPlay: [
       HowToStep(
         icon: Icons.swipe,
@@ -189,7 +188,7 @@ const List<CatalogueEntry> appCatalogue = [
     tagline: 'Clear the board, avoid the mines',
     icon: Icons.flag,
     colour: Color(0xFFE53935),
-    demo: HowToScripts.minesweeper,
+    coachMoves: CoachMoves.minesweeper,
     howToPlay: [
       HowToStep(
         icon: Icons.touch_app,
@@ -218,7 +217,7 @@ const List<CatalogueEntry> appCatalogue = [
     tagline: 'Find the hidden words',
     icon: Icons.search,
     colour: Color(0xFF00ACC1),
-    demo: HowToScripts.wordSearch,
+    coachMoves: CoachMoves.wordSearch,
     howToPlay: [
       HowToStep(
         icon: Icons.list_alt,
@@ -247,7 +246,7 @@ const List<CatalogueEntry> appCatalogue = [
     tagline: 'Numbers in, picture out',
     icon: Icons.blur_linear,
     colour: Color(0xFF8E24AA),
-    demo: HowToScripts.nonogram,
+    coachMoves: CoachMoves.nonogram,
     howToPlay: [
       HowToStep(
         icon: Icons.numbers,
@@ -276,7 +275,7 @@ const List<CatalogueEntry> appCatalogue = [
     tagline: 'Find every pair',
     icon: Icons.style_outlined,
     colour: Color(0xFFD81B60),
-    demo: HowToScripts.memory,
+    coachMoves: CoachMoves.memory,
     howToPlay: [
       HowToStep(
         icon: Icons.touch_app,
@@ -305,7 +304,7 @@ const List<CatalogueEntry> appCatalogue = [
     tagline: 'Get the tiles back in order',
     icon: Icons.apps,
     colour: Color(0xFF00897B),
-    demo: HowToScripts.slidingPuzzle,
+    coachMoves: CoachMoves.slidingPuzzle,
     howToPlay: [
       HowToStep(
         icon: Icons.touch_app,
@@ -334,7 +333,7 @@ const List<CatalogueEntry> appCatalogue = [
     tagline: 'Close more boxes than the computer',
     icon: Icons.border_all,
     colour: Color(0xFF43A047),
-    demo: HowToScripts.dotsAndBoxes,
+    coachMoves: CoachMoves.dotsAndBoxes,
     howToPlay: [
       HowToStep(
         icon: Icons.linear_scale,
@@ -367,7 +366,7 @@ const List<CatalogueEntry> appCatalogue = [
     tagline: 'How fast are you, really?',
     icon: Icons.bolt,
     colour: Color(0xFFF9A825),
-    demo: HowToScripts.reaction,
+    coachMoves: CoachMoves.reaction,
     howToPlay: [
       HowToStep(
         icon: Icons.hourglass_empty,
