@@ -50,8 +50,15 @@ CatalogueEntry scoringGameWithLevels() => appCatalogue.firstWhere(
           e.levels.first.definition.capabilities.showsScore,
     );
 
-/// Opens the sheet for [entry] from the home grid.
+/// Opens the full catalogue, which now sits one tap behind the front door.
+Future<void> openGames(WidgetTester tester) async {
+  await tester.tap(find.textContaining('Or pick one of'));
+  await tester.pumpAndSettle();
+}
+
+/// Opens the sheet for [entry], from the front door.
 Future<void> openSheet(WidgetTester tester, CatalogueEntry entry) async {
+  await openGames(tester);
   await tester.scrollUntilVisible(find.text(entry.name), 200);
   await tester.pumpAndSettle();
   await tester.tap(find.text(entry.name));
@@ -98,6 +105,7 @@ void main() {
       await phoneSurface(tester);
       await tester.pumpWidget(app(records));
       await tester.pumpAndSettle();
+      await openGames(tester);
 
       expect(find.text('Sudoku'), findsOneWidget);
       expect(find.text('Sudoku · Easy'), findsNothing);
@@ -117,6 +125,7 @@ void main() {
       await phoneSurface(tester);
       await tester.pumpWidget(app(records));
       await tester.pumpAndSettle();
+      await openGames(tester);
 
       expect(find.byIcon(Icons.check_circle), findsOneWidget);
     });
@@ -129,6 +138,7 @@ void main() {
       await phoneSurface(tester);
       await tester.pumpWidget(app(records));
       await tester.pumpAndSettle();
+      await openGames(tester);
 
       expect(find.byIcon(Icons.check_circle), findsNothing);
     });

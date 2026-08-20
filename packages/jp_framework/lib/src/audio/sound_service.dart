@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
 
 import 'tone.dart';
 
@@ -73,9 +75,25 @@ class ToneSounds implements SoundService {
   @override
   bool enabled = true;
 
-  final Map<Sfx, Uint8List> _cache = {};
+  /// Paths to the generated WAV files, one per sound.
+  ///
+  /// Files rather than raw bytes. The first version played a `BytesSource` in
+  /// `PlayerMode.lowLatency`, and on Android that mode is backed by SoundPool,
+  /// which will not take a byte buffer — so every call failed silently and the
+  /// app shipped completely mute. A failure that produces silence is
+  /// indistinguishable from "sound is switched off", which is why it survived
+  /// all the way to a device.
+  final Map<Sfx, String> _files = {};
+
   final List<AudioPlayer> _players = [];
   int _next = 0;
+
+  /// Whether [initialise] actually got as far as writing playable files.
+  ///
+  /// Exposed so a caller can tell "no sound because it is off" from "no sound
+  /// because it broke" — the distinction this class previously could not make.
+  bool get isReady => _ready;
+  bool _ready = false;
 
   /// A small pool, cycled.
   ///
@@ -86,28 +104,30 @@ class ToneSounds implements SoundService {
 
   @override
   Future<void> initialise() async {
-    if (_players.isNotEmpty) return;
+    if (_ready) return;
+
+    final directory = await getTemporaryDirectory();
 
     for (final sound in Sfx.values) {
-      _cache[sound] = ToneSynth.wav(_recipe(sound));
+      final file = File('${directory.path}/jp_${sound.name}.wav');
+      await file.writeAsBytes(ToneSynth.wav(_recipe(sound)), flush: true);
+      _files[sound] = file.path;
     }
 
     for (var i = 0; i < _poolSize; i++) {
-      final player = AudioPlayer()..setReleaseMode(ReleaseMode.stop);
-      // Ducks rather than stops background audio: someone playing this with a
-      // podcast on should not lose the podcast.
-      await player.setPlayerMode(PlayerMode.lowLatency);
-      _players.add(player);
+      _players.add(AudioPlayer()..setReleaseMode(ReleaseMode.stop));
     }
+
+    _ready = true;
   }
 
   @override
   void play(Sfx sound) {
     if (haptics) _haptic(sound);
-    if (!enabled || _players.isEmpty) return;
+    if (!enabled || !_ready) return;
 
-    final bytes = _cache[sound];
-    if (bytes == null) return;
+    final path = _files[sound];
+    if (path == null) return;
 
     final player = _players[_next];
     _next = (_next + 1) % _players.length;
@@ -117,7 +137,7 @@ class ToneSounds implements SoundService {
     // route, or one that refuses to play during a call, must not throw into a
     // game loop.
     unawaited(
-      player.play(BytesSource(bytes), volume: 0.6).catchError((Object _) {}),
+      player.play(DeviceFileSource(path), volume: 0.6).catchError((Object _) {}),
     );
   }
 

@@ -29,6 +29,10 @@ Future<void> phone(WidgetTester tester) async {
 
 /// Opens [entry] at its default level, the way a player does.
 Future<void> play(WidgetTester tester, CatalogueEntry entry) async {
+  // The catalogue moved one screen back when the Journey became the front door.
+  await tester.tap(find.textContaining('Or pick one of'));
+  await tester.pumpAndSettle();
+
   await tester.scrollUntilVisible(find.text(entry.name), 200);
   await tester.pumpAndSettle();
   await tester.tap(find.text(entry.name));

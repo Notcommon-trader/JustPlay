@@ -20,7 +20,32 @@ Future<void> phone(WidgetTester tester) async {
   addTearDown(() => tester.binding.setSurfaceSize(null));
 }
 
+/// Walks from the front door to the full catalogue.
+///
+/// The grid used to be the home screen. It moved a screen back when the Journey
+/// became the front door, because a run and a menu of ten games shown together
+/// read as equal options — and the run exists precisely to remove that choice.
+Future<void> openGames(WidgetTester tester) async {
+  await tester.tap(find.textContaining('Or pick one of'));
+  await tester.pumpAndSettle();
+}
+
 void main() {
+  testWidgets('the front door, light', (tester) async {
+    await phone(tester);
+    final records = emptyStore();
+    addTearDown(records.dispose);
+    await records.load();
+
+    await tester.pumpWidget(TimeKillerApp(records: records));
+    await tester.pumpAndSettle();
+
+    await expectLater(
+      find.byType(MaterialApp),
+      matchesGoldenFile('goldens/home_light.png'),
+    );
+  });
+
   testWidgets('the game grid, light', (tester) async {
     await phone(tester);
     final records = emptyStore();
@@ -29,6 +54,7 @@ void main() {
 
     await tester.pumpWidget(TimeKillerApp(records: records));
     await tester.pumpAndSettle();
+    await openGames(tester);
 
     await expectLater(
       find.byType(MaterialApp),
@@ -49,6 +75,7 @@ void main() {
 
     await tester.pumpWidget(TimeKillerApp(records: records));
     await tester.pumpAndSettle();
+    await openGames(tester);
 
     await expectLater(
       find.byType(MaterialApp),
@@ -65,6 +92,8 @@ void main() {
 
     await tester.pumpWidget(TimeKillerApp(records: records));
     await tester.pumpAndSettle();
+
+    await openGames(tester);
 
     // Sudoku: three levels and four rules, so the sheet is at its fullest.
     await tester.tap(find.text(appCatalogue.first.name));
@@ -87,6 +116,8 @@ void main() {
 
     await tester.pumpWidget(TimeKillerApp(records: records));
     await tester.pumpAndSettle();
+
+    await openGames(tester);
 
     final entry = appCatalogue.firstWhere((e) => e.name == 'Minesweeper');
     await tester.scrollUntilVisible(find.text(entry.name), 200);
