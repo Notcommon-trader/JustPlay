@@ -34,6 +34,12 @@ enum Sfx {
 /// first attempt put these next to the audio plugin, and the generator could not
 /// execute at all because importing it dragged in the whole Flutter binding.
 ///
+/// Levels sit near full scale. The first version peaked around -13dB once the
+/// player's own 0.6 multiplier and the envelope were applied, which on a phone
+/// speaker is close to inaudible - the platform reported a successful play and
+/// nothing was heard. Loud is recoverable with a volume control; inaudible reads
+/// as broken.
+///
 /// Tuned to a pentatonic scale, which is why they sit together rather than
 /// clashing: on a five-note scale there is no combination that sounds wrong, so
 /// sounds landing on top of each other stay pleasant.
@@ -46,28 +52,28 @@ List<Tone> recipeFor(Sfx sound) {
   const c6 = 1046.50;
 
   return switch (sound) {
-    Sfx.tap => const [Tone(hz: g5, milliseconds: 40, volume: 0.22)],
+    Sfx.tap => const [Tone(hz: g5, milliseconds: 40, volume: 0.75)],
     Sfx.gain => const [
-        Tone(hz: e5, milliseconds: 55, volume: 0.32),
-        Tone(hz: a5, milliseconds: 75, volume: 0.30),
+        Tone(hz: e5, milliseconds: 55, volume: 0.90),
+        Tone(hz: a5, milliseconds: 75, volume: 0.88),
       ],
-    // Down a step, quiet, and soft-edged. A refusal should read as "not that"
+    // Down a step and soft-edged. A refusal should read as "not that"
     // rather than as a punishment.
     Sfx.reject => const [
-        Tone(hz: 220, milliseconds: 90, volume: 0.22, wave: Wave.triangle),
+        Tone(hz: 220, milliseconds: 90, volume: 0.75, wave: Wave.triangle),
       ],
     Sfx.win => const [
-        Tone(hz: c5, milliseconds: 80, volume: 0.34),
-        Tone(hz: e5, milliseconds: 80, volume: 0.34),
-        Tone(hz: g5, milliseconds: 80, volume: 0.34),
-        Tone(hz: c6, milliseconds: 220, volume: 0.38),
+        Tone(hz: c5, milliseconds: 80, volume: 0.92),
+        Tone(hz: e5, milliseconds: 80, volume: 0.92),
+        Tone(hz: g5, milliseconds: 80, volume: 0.92),
+        Tone(hz: c6, milliseconds: 220, volume: 1.0),
       ],
     // Falling, in a minor third — the interval every culture reads as
     // disappointment. Short, so it never feels like being told off.
     Sfx.lose => const [
-        Tone(hz: d5, milliseconds: 110, volume: 0.26, wave: Wave.triangle),
-        Tone(hz: 392, milliseconds: 170, volume: 0.24, wave: Wave.triangle),
+        Tone(hz: d5, milliseconds: 110, volume: 0.80, wave: Wave.triangle),
+        Tone(hz: 392, milliseconds: 170, volume: 0.78, wave: Wave.triangle),
       ],
-    Sfx.star => const [Tone(hz: c6, milliseconds: 90, volume: 0.34)],
+    Sfx.star => const [Tone(hz: c6, milliseconds: 90, volume: 0.92)],
   };
 }

@@ -17,6 +17,21 @@ abstract class SoundService {
   bool get enabled;
   set enabled(bool value);
 
+  /// Whether the service believes it can play anything.
+  bool get isReady;
+
+  /// The last failure, if any.
+  Object? get lastError;
+
+  /// Plays [sound] and **waits**, returning whatever went wrong or null.
+  ///
+  /// Part of the interface rather than a debug afterthought, because this class
+  /// of bug is not visible any other way. Every audio failure so far produced
+  /// silence, which is indistinguishable from working correctly with the volume
+  /// down — so four broken builds passed every green test and reached a phone.
+  /// A path that surfaces the exception is the only way to tell those apart.
+  Future<Object?> playAndReport(Sfx sound);
+
   Future<void> dispose();
 }
 
@@ -26,10 +41,19 @@ class SilentSounds implements SoundService {
   bool enabled = false;
 
   @override
+  bool get isReady => false;
+
+  @override
+  Object? get lastError => null;
+
+  @override
   Future<void> initialise() async {}
 
   @override
   void play(Sfx sound) {}
+
+  @override
+  Future<Object?> playAndReport(Sfx sound) async => 'sound is disabled';
 
   @override
   Future<void> dispose() async {}
@@ -56,6 +80,7 @@ class ToneSounds implements SoundService {
   /// Exposed so a caller can tell "no sound because it is off" from "no sound
   /// because it broke" — a distinction this class could not make when it shipped
   /// mute, twice.
+  @override
   bool get isReady => _ready;
   bool _ready = false;
 
@@ -63,6 +88,7 @@ class ToneSounds implements SoundService {
   ///
   /// Silence is the least debuggable failure there is: it looks exactly like
   /// working correctly with the volume down.
+  @override
   Object? get lastError => _lastError;
   Object? _lastError;
 
@@ -97,29 +123,15 @@ class ToneSounds implements SoundService {
       _players.add(AudioPlayer()..setReleaseMode(ReleaseMode.stop));
     }
 
-    // Ready before the optional part, not after.
+    // No custom AudioContext.
     //
-    // The audio context is a nicety — it ducks a podcast instead of stopping it.
-    // Previously it sat inside the same try block that set `_ready`, so a device
-    // that refused the context left the whole app mute for the sake of a
-    // courtesy. Failing to be polite is not a reason to be silent.
+    // The previous version asked for contentType sonification with a ducking
+    // focus request, which on Android can route a sound somewhere other than the
+    // media stream — audible in theory, silent in practice, and reported as a
+    // successful play either way. The plugin's default is ordinary media
+    // playback, which is the well-trodden path. Politeness towards other audio
+    // is not worth a fifth silent release.
     _ready = true;
-
-    try {
-      for (final player in _players) {
-        await player.setAudioContext(
-          AudioContext(
-            android: const AudioContextAndroid(
-              contentType: AndroidContentType.sonification,
-              usageType: AndroidUsageType.game,
-              audioFocus: AndroidAudioFocus.gainTransientMayDuck,
-            ),
-          ),
-        );
-      }
-    } on Object catch (error) {
-      _lastError = error;
-    }
   }
 
   @override
@@ -135,9 +147,30 @@ class ToneSounds implements SoundService {
     // a failure that leaves no trace is how this bug survived two releases.
     unawaited(
       player
-          .play(AssetSource('$_folder/${sound.name}.wav'), volume: 0.6)
+          .play(AssetSource('$_folder/${sound.name}.wav'), volume: 1)
           .catchError((Object error) => _lastError = error),
     );
+  }
+
+  @override
+  Future<Object?> playAndReport(Sfx sound) async {
+    if (_players.isEmpty) {
+      return 'no audio players were created; initialise() ran: $_ready'
+          '${_lastError == null ? '' : ', last error: $_lastError'}';
+    }
+
+    try {
+      // Awaited, unlike [play]. The whole point is to see the exception rather
+      // than let it disappear into a future nobody holds.
+      await _players.first.play(
+        AssetSource('$_folder/${sound.name}.wav'),
+        volume: 1,
+      );
+      return null;
+    } on Object catch (error) {
+      _lastError = error;
+      return error;
+    }
   }
 
   void _haptic(Sfx sound) {

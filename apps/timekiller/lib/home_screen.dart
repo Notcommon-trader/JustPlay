@@ -5,6 +5,7 @@ import 'package:jp_ui/jp_ui.dart';
 
 import 'catalogue.dart';
 import 'games_screen.dart';
+import 'sound_check.dart';
 import 'journey/stage_definitions.dart';
 import 'main.dart';
 
@@ -38,7 +39,23 @@ class HomeScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: JpSpace.xl),
-              Text('JustPlay', style: theme.textTheme.displaySmall),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text('JustPlay', style: theme.textTheme.displaySmall),
+                  ),
+                  // Sound check. Present because four builds shipped mute and
+                  // nothing in the app could say why — a failure to play is
+                  // indistinguishable from the volume being down unless
+                  // something reports it.
+                  IconButton(
+                    icon: const Icon(Icons.volume_up_outlined),
+                    tooltip: 'Sound check',
+                    onPressed: () =>
+                        showSoundCheck(context, SoundScope.of(context)),
+                  ),
+                ],
+              ),
               const SizedBox(height: JpSpace.xxs),
               Text(
                 // Says what the app is, not what it contains. "Ten games" was a
