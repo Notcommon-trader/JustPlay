@@ -34,6 +34,13 @@
 -dontwarn io.flutter.embedding.engine.deferredcomponents.**
 -dontwarn io.flutter.embedding.android.FlutterPlayStoreSplitApplication
 
+# audioplayers. Registered reflectively like every Flutter plugin, so R8 sees no
+# reference to it from Dart and is free to strip it. The failure mode is silence,
+# which is indistinguishable from the volume being down — the same class of
+# invisible break that kept this app mute for three releases.
+-keep class xyz.luan.audioplayers.** { *; }
+-dontwarn xyz.luan.audioplayers.**
+
 # Keep annotations and signatures. Without them, generic types are erased in a
 # way that breaks reflective type inspection in some plugins.
 -keepattributes *Annotation*

@@ -73,24 +73,40 @@ class ToneSounds implements SoundService {
   /// to overlap without a phone struggling to mix them.
   static const int _poolSize = 4;
 
-  /// Where the generated WAVs live, relative to the app's asset root.
+  /// Folder holding the generated WAVs, **without** a leading `assets/`.
   ///
-  /// Assets, not files written at runtime. The previous version synthesised them
-  /// into a temporary directory during startup, inside an un-awaited future — so
-  /// a failure in `getTemporaryDirectory`, the write, or the plugin left the app
-  /// permanently silent with nothing to show for it. An asset either ships or
-  /// the build fails.
-  static const String _assetRoot = 'assets/sfx';
+  /// audioplayers prepends its own `assets/` prefix before looking a source up,
+  /// so passing `assets/sfx/win.wav` makes it search for
+  /// `assets/assets/sfx/win.wav`. That is exactly what shipped: the files were
+  /// present and correct in the APK, the lookup failed, the error went into
+  /// [lastError], and nothing ever read it. Three silent releases came out of one
+  /// duplicated path segment.
+  ///
+  /// [assetKey] exists so a test can check the *resolved* key against the bundle
+  /// rather than the one handed to the plugin.
+  static const String _folder = 'sfx';
+
+  /// The bundle key a sound really resolves to, prefix included.
+  static String assetKey(Sfx sound) => 'assets/$_folder/${sound.name}.wav';
 
   @override
   Future<void> initialise() async {
     if (_ready) return;
 
+    for (var i = 0; i < _poolSize; i++) {
+      _players.add(AudioPlayer()..setReleaseMode(ReleaseMode.stop));
+    }
+
+    // Ready before the optional part, not after.
+    //
+    // The audio context is a nicety — it ducks a podcast instead of stopping it.
+    // Previously it sat inside the same try block that set `_ready`, so a device
+    // that refused the context left the whole app mute for the sake of a
+    // courtesy. Failing to be polite is not a reason to be silent.
+    _ready = true;
+
     try {
-      for (var i = 0; i < _poolSize; i++) {
-        final player = AudioPlayer()..setReleaseMode(ReleaseMode.stop);
-        // Ducks other audio rather than stopping it: someone playing this with a
-        // podcast on should keep the podcast.
+      for (final player in _players) {
         await player.setAudioContext(
           AudioContext(
             android: const AudioContextAndroid(
@@ -100,9 +116,7 @@ class ToneSounds implements SoundService {
             ),
           ),
         );
-        _players.add(player);
       }
-      _ready = true;
     } on Object catch (error) {
       _lastError = error;
     }
@@ -121,7 +135,7 @@ class ToneSounds implements SoundService {
     // a failure that leaves no trace is how this bug survived two releases.
     unawaited(
       player
-          .play(AssetSource('$_assetRoot/${sound.name}.wav'), volume: 0.6)
+          .play(AssetSource('$_folder/${sound.name}.wav'), volume: 0.6)
           .catchError((Object error) => _lastError = error),
     );
   }

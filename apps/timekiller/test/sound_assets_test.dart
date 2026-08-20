@@ -15,15 +15,24 @@ import 'package:jp_framework/jp_framework.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('every sound the code can ask for is bundled', () async {
+  test('the key each sound actually resolves to is bundled', () async {
+    // **This is the test that was missing, and it is not the obvious one.**
+    //
+    // The earlier version hardcoded 'assets/sfx/x.wav' and passed — because the
+    // files really were bundled under that key. What it never checked was the
+    // path the *plugin* ends up looking for. audioplayers prepends its own
+    // `assets/` prefix, so the code was asking for assets/assets/sfx/x.wav while
+    // this test cheerfully confirmed a different, correct path existed.
+    //
+    // Asking ToneSounds for the resolved key is what closes that gap: the test
+    // and the player now read from the same source of truth, so they cannot
+    // disagree again.
     for (final sfx in Sfx.values) {
-      final key = 'assets/sfx/${sfx.name}.wav';
-
-      final data = await rootBundle.load(key);
+      final data = await rootBundle.load(ToneSounds.assetKey(sfx));
       expect(
         data.lengthInBytes,
         greaterThan(1000),
-        reason: '$key is missing or empty — regenerate with '
+        reason: '${ToneSounds.assetKey(sfx)} is missing or empty — regenerate with '
             'dart run example/generate_sfx.dart',
       );
     }
@@ -33,7 +42,7 @@ void main() {
     // A zero-byte file, or a text file with the right name, would satisfy a
     // "does it exist" check and still play nothing.
     for (final sfx in Sfx.values) {
-      final data = await rootBundle.load('assets/sfx/${sfx.name}.wav');
+      final data = await rootBundle.load(ToneSounds.assetKey(sfx));
       final bytes = data.buffer.asUint8List();
 
       expect(String.fromCharCodes(bytes.sublist(0, 4)), 'RIFF',
@@ -48,7 +57,7 @@ void main() {
     // code but never regenerated would leave the app playing the old sound with
     // no sign anything was stale.
     for (final sfx in Sfx.values) {
-      final bundled = await rootBundle.load('assets/sfx/${sfx.name}.wav');
+      final bundled = await rootBundle.load(ToneSounds.assetKey(sfx));
       final fresh = ToneSynth.wav(recipeFor(sfx));
 
       expect(
