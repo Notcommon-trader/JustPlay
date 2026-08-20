@@ -31,3 +31,13 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  # Generated, not recorded. Regenerate after changing a tone:
+  #   cd packages/jp_framework
+  #   dart run example/generate_sfx.dart ../../apps/timekiller/assets/sfx
+  #
+  # Shipped as assets rather than synthesised at launch, because a runtime
+  # failure in that path is silent and looks exactly like sound being switched
+  # off — which is how this shipped mute twice.
+  assets:
+    - assets/sfx/

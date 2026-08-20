@@ -17,7 +17,6 @@ dependencies:
   # per-game record, and a database would be build tooling and generated code
   # bought against a need that has not arrived. The KeyValueStore port is what
   # makes swapping in Isar later a one-file change.
-  path_provider: ^2.1.6
   shared_preferences: ^2.3.0
 
 dev_dependencies:

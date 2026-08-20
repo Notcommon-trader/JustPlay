@@ -1,38 +1,11 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/services.dart';
-import 'package:path_provider/path_provider.dart';
 
-import 'tone.dart';
+import 'sfx.dart';
 
-/// Every sound the app makes.
-///
-/// A closed set, deliberately. A game that plays a slightly different noise at
-/// forty different moments sounds like noise; the same six sounds, used
-/// consistently, become a language a player stops noticing and starts relying
-/// on.
-enum Sfx {
-  /// A move landed. The most frequent sound in the app, so the quietest and
-  /// shortest — anything characterful becomes unbearable by the hundredth time.
-  tap,
-
-  /// Something good happened mid-game: a merge, a matched pair, a found word.
-  gain,
-
-  /// A move was refused.
-  reject,
-
-  /// A stage or game was cleared.
-  win,
-
-  /// A stage was failed.
-  lose,
-
-  /// A star was awarded. Played once per star, in sequence.
-  star,
-}
+export 'sfx.dart';
 
 /// Plays the app's sounds.
 abstract class SoundService {
@@ -75,25 +48,23 @@ class ToneSounds implements SoundService {
   @override
   bool enabled = true;
 
-  /// Paths to the generated WAV files, one per sound.
-  ///
-  /// Files rather than raw bytes. The first version played a `BytesSource` in
-  /// `PlayerMode.lowLatency`, and on Android that mode is backed by SoundPool,
-  /// which will not take a byte buffer — so every call failed silently and the
-  /// app shipped completely mute. A failure that produces silence is
-  /// indistinguishable from "sound is switched off", which is why it survived
-  /// all the way to a device.
-  final Map<Sfx, String> _files = {};
-
   final List<AudioPlayer> _players = [];
   int _next = 0;
 
-  /// Whether [initialise] actually got as far as writing playable files.
+  /// Whether the players are built and ready.
   ///
   /// Exposed so a caller can tell "no sound because it is off" from "no sound
-  /// because it broke" — the distinction this class previously could not make.
+  /// because it broke" — a distinction this class could not make when it shipped
+  /// mute, twice.
   bool get isReady => _ready;
   bool _ready = false;
+
+  /// Whatever went wrong during [initialise], kept rather than swallowed.
+  ///
+  /// Silence is the least debuggable failure there is: it looks exactly like
+  /// working correctly with the volume down.
+  Object? get lastError => _lastError;
+  Object? _lastError;
 
   /// A small pool, cycled.
   ///
@@ -102,23 +73,39 @@ class ToneSounds implements SoundService {
   /// to overlap without a phone struggling to mix them.
   static const int _poolSize = 4;
 
+  /// Where the generated WAVs live, relative to the app's asset root.
+  ///
+  /// Assets, not files written at runtime. The previous version synthesised them
+  /// into a temporary directory during startup, inside an un-awaited future — so
+  /// a failure in `getTemporaryDirectory`, the write, or the plugin left the app
+  /// permanently silent with nothing to show for it. An asset either ships or
+  /// the build fails.
+  static const String _assetRoot = 'assets/sfx';
+
   @override
   Future<void> initialise() async {
     if (_ready) return;
 
-    final directory = await getTemporaryDirectory();
-
-    for (final sound in Sfx.values) {
-      final file = File('${directory.path}/jp_${sound.name}.wav');
-      await file.writeAsBytes(ToneSynth.wav(_recipe(sound)), flush: true);
-      _files[sound] = file.path;
+    try {
+      for (var i = 0; i < _poolSize; i++) {
+        final player = AudioPlayer()..setReleaseMode(ReleaseMode.stop);
+        // Ducks other audio rather than stopping it: someone playing this with a
+        // podcast on should keep the podcast.
+        await player.setAudioContext(
+          AudioContext(
+            android: const AudioContextAndroid(
+              contentType: AndroidContentType.sonification,
+              usageType: AndroidUsageType.game,
+              audioFocus: AndroidAudioFocus.gainTransientMayDuck,
+            ),
+          ),
+        );
+        _players.add(player);
+      }
+      _ready = true;
+    } on Object catch (error) {
+      _lastError = error;
     }
-
-    for (var i = 0; i < _poolSize; i++) {
-      _players.add(AudioPlayer()..setReleaseMode(ReleaseMode.stop));
-    }
-
-    _ready = true;
   }
 
   @override
@@ -126,18 +113,16 @@ class ToneSounds implements SoundService {
     if (haptics) _haptic(sound);
     if (!enabled || !_ready) return;
 
-    final path = _files[sound];
-    if (path == null) return;
-
     final player = _players[_next];
     _next = (_next + 1) % _players.length;
 
-    // Deliberately not awaited, and deliberately swallowing failures. Audio is
-    // the least important thing happening on screen; a device with no audio
-    // route, or one that refuses to play during a call, must not throw into a
-    // game loop.
+    // Deliberately not awaited, but no longer silently swallowed: audio is the
+    // least important thing on screen and must never throw into a game loop, and
+    // a failure that leaves no trace is how this bug survived two releases.
     unawaited(
-      player.play(DeviceFileSource(path), volume: 0.6).catchError((Object _) {}),
+      player
+          .play(AssetSource('$_assetRoot/${sound.name}.wav'), volume: 0.6)
+          .catchError((Object error) => _lastError = error),
     );
   }
 
@@ -154,46 +139,6 @@ class ToneSounds implements SoundService {
       case Sfx.lose:
         unawaited(HapticFeedback.heavyImpact().catchError((Object _) {}));
     }
-  }
-
-  /// The sounds themselves.
-  ///
-  /// Tuned to a pentatonic scale, which is why they sit together rather than
-  /// clashing: on a five-note scale there is no combination that sounds wrong,
-  /// so sounds landing on top of each other stay pleasant.
-  static List<Tone> _recipe(Sfx sound) {
-    const c5 = 523.25;
-    const d5 = 587.33;
-    const e5 = 659.25;
-    const g5 = 783.99;
-    const a5 = 880.00;
-    const c6 = 1046.50;
-
-    return switch (sound) {
-      Sfx.tap => const [Tone(hz: g5, milliseconds: 40, volume: 0.22)],
-      Sfx.gain => const [
-          Tone(hz: e5, milliseconds: 55, volume: 0.32),
-          Tone(hz: a5, milliseconds: 75, volume: 0.30),
-        ],
-      // Down a step, quiet, and soft-edged. A refusal should read as "not that"
-      // rather than as a punishment.
-      Sfx.reject => const [
-          Tone(hz: 220, milliseconds: 90, volume: 0.22, wave: Wave.triangle),
-        ],
-      Sfx.win => const [
-          Tone(hz: c5, milliseconds: 80, volume: 0.34),
-          Tone(hz: e5, milliseconds: 80, volume: 0.34),
-          Tone(hz: g5, milliseconds: 80, volume: 0.34),
-          Tone(hz: c6, milliseconds: 220, volume: 0.38),
-        ],
-      // Falling, and in a minor third, which is the interval every culture reads
-      // as disappointment. Short, so it never feels like being told off.
-      Sfx.lose => const [
-          Tone(hz: d5, milliseconds: 110, volume: 0.26, wave: Wave.triangle),
-          Tone(hz: 392, milliseconds: 170, volume: 0.24, wave: Wave.triangle),
-        ],
-      Sfx.star => const [Tone(hz: c6, milliseconds: 90, volume: 0.34)],
-    };
   }
 
   @override
