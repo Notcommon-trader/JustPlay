@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:jp_core/jp_core.dart';
+import 'package:jp_framework/jp_framework.dart';
 
 /// Drives one play session: status, score, move count and the elapsed clock.
 ///
@@ -15,8 +16,18 @@ import 'package:jp_core/jp_core.dart';
 /// state — settings, entitlements, the game catalogue — where sharing and
 /// lifetime actually matter.
 class GameSession extends ChangeNotifier {
-  GameSession({int bestScore = 0, this.tracksTime = true})
-      : _state = GameSessionState(bestScore: bestScore);
+  GameSession({int bestScore = 0, this.tracksTime = true, SoundService? sounds})
+      : _sounds = sounds ?? SilentSounds(),
+        _state = GameSessionState(bestScore: bestScore);
+
+  /// Where the app's sounds come from.
+  ///
+  /// **Every game gets audio from this one place.** A game already reports what
+  /// happened through `addScore`, `recordMove` and `finish`, so those three
+  /// calls are the complete vocabulary of "something happened" for all ten
+  /// boards. Wiring sound here rather than into each view means a new game is
+  /// audible the day it is written, with nothing to remember.
+  final SoundService _sounds;
 
   /// Whether the elapsed clock runs. Off for untimed puzzles, where a visible
   /// timer adds pressure the game was not designed around.
@@ -58,10 +69,15 @@ class GameSession extends ChangeNotifier {
 
   void addScore(int points) {
     if (points == 0) return;
+    // Scoring is the good moment in every game that has one — a merge, a matched
+    // pair, a found word — so it gets the rewarding sound rather than the move
+    // sound.
+    _sounds.play(points > 0 ? Sfx.gain : Sfx.reject);
     _update(_state.copyWith(score: _state.score + points));
   }
 
   void recordMove() {
+    _sounds.play(Sfx.tap);
     _update(_state.copyWith(moves: _state.moves + 1));
   }
 
@@ -70,6 +86,9 @@ class GameSession extends ChangeNotifier {
   void finish(GameOutcome outcome) {
     if (_state.status == GameStatus.finished) return;
     _stopTicker();
+    // Inside the idempotency guard, so a game that detects its own end in two
+    // places cannot play the win chord twice.
+    _sounds.play(outcome == GameOutcome.won ? Sfx.win : Sfx.lose);
     _update(_state.copyWith(status: GameStatus.finished, outcome: outcome));
   }
 

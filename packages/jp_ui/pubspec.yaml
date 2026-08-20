@@ -13,6 +13,11 @@ dependencies:
   flutter:
     sdk: flutter
   jp_core: ^0.1.0
+  # Only for SoundService. The dependency direction is the one ARCHITECTURE.md
+  # already records — jp_ui sits above jp_framework — and routing sound through
+  # GameSession is what gives all ten games audio from a single change instead of
+  # ten hand-wired boards.
+  jp_framework: ^0.1.0
 
 dev_dependencies:
   flutter_test:

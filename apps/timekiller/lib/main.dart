@@ -127,6 +127,7 @@ void openGame(BuildContext context, CatalogueEntry entry, GameLevel level) {
   final records = GameRecordScope.read(context);
   final gameId = level.definition.id;
   final brightness = Theme.of(context).brightness;
+  final sounds = SoundScope.of(context);
 
   Navigator.of(context).push(
     MaterialPageRoute<void>(
@@ -135,6 +136,10 @@ void openGame(BuildContext context, CatalogueEntry entry, GameLevel level) {
         // colour, not a palette's interpretation of it. See gameTheme.
         data: gameTheme(entry.colour, brightness),
         child: GameShell(
+        // Games opened from the catalogue were silent even after the Journey had
+        // sound: audio was wired into the run's result panel only, never into
+        // the boards themselves.
+        sounds: sounds,
         accent: gameColourFor(
           entry.colour,
           gameTheme(entry.colour, brightness).colorScheme,

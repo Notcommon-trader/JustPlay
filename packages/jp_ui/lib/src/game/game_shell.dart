@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jp_core/jp_core.dart';
+import 'package:jp_framework/jp_framework.dart';
 
 import '../tokens/jp_tokens.dart';
 import '../widgets/jp_button.dart';
@@ -16,6 +17,7 @@ class GameShell extends StatefulWidget {
     required this.definition,
     required this.title,
     this.accent,
+    this.sounds,
     this.boardWrapper,
     this.bestScore = 0,
     this.onExit,
@@ -37,6 +39,9 @@ class GameShell extends StatefulWidget {
   /// makes the connection obvious. Null falls back to the ambient theme, so a
   /// host that does not care about identity is unaffected.
   final Color? accent;
+
+  /// Handed to the session, which is where every game's audio comes from.
+  final SoundService? sounds;
 
   /// Wraps the board, and only the board.
   ///
@@ -65,6 +70,7 @@ class _GameShellState extends State<GameShell> with WidgetsBindingObserver {
   late final GameSession _session = GameSession(
     bestScore: widget.bestScore,
     tracksTime: widget.definition.capabilities.showsTimer,
+    sounds: widget.sounds,
   );
 
   /// True while the quit-confirmation dialog is open.

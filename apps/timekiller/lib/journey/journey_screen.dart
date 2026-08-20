@@ -77,6 +77,8 @@ class _JourneyScreenState extends State<JourneyScreen> {
     final definition = _definition;
     final session = GameSession(
       tracksTime: definition.capabilities.showsTimer,
+      // Every move, merge and match in the run is audible through this.
+      sounds: widget.sounds,
     )..addListener(_onSessionChanged);
 
     setState(() {
