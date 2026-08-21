@@ -134,10 +134,41 @@ class ToneSounds implements SoundService {
     _ready = true;
   }
 
+  /// How many sounds the app has asked for, and how many were dropped.
+  ///
+  /// Counters rather than logs, because the question is asked *after* a game —
+  /// the player comes back to the sound check and it says whether anything was
+  /// requested at all. That distinguishes "the games never called play" from
+  /// "play was called and refused" from "it played and you could not hear it",
+  /// which no amount of listening can.
+  int get requested => _requested;
+  int _requested = 0;
+
+  int get dropped => _dropped;
+  int _dropped = 0;
+
+  Sfx? get lastRequested => _lastRequested;
+  Sfx? _lastRequested;
+
   @override
   void play(Sfx sound) {
+    _requested++;
+    _lastRequested = sound;
+
     if (haptics) _haptic(sound);
-    if (!enabled || !_ready) return;
+
+    // **No `_ready` check.**
+    //
+    // This gate is why the sound-check button worked while the games stayed
+    // mute: playAndReport only ever required a player to exist, while this path
+    // also demanded a flag that the diagnostic never consulted. Two code paths
+    // to the same speaker, with different preconditions, and only one of them
+    // was being tested. The condition that actually matters is whether there is
+    // a player to play through.
+    if (!enabled || _players.isEmpty) {
+      _dropped++;
+      return;
+    }
 
     final player = _players[_next];
     _next = (_next + 1) % _players.length;

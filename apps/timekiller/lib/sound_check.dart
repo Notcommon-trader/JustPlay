@@ -118,6 +118,24 @@ class _SoundCheckState extends State<_SoundCheck> {
               bad: false,
             ),
 
+            // Read *after* playing a game. This is the line that says whether
+            // the games are asking for sound at all — "requested 0" and
+            // "requested 40, dropped 40" are completely different bugs, and from
+            // the outside both are just silence.
+            if (sounds is ToneSounds) ...[
+              _Line(
+                label: 'Play requests',
+                value: '${sounds.requested}'
+                    '${sounds.lastRequested == null ? '' : ' (last: ${sounds.lastRequested!.name})'}',
+                bad: false,
+              ),
+              _Line(
+                label: 'Dropped',
+                value: '${sounds.dropped}',
+                bad: sounds.dropped > 0,
+              ),
+            ],
+
             const SizedBox(height: JpSpace.lg),
             const Divider(),
             const SizedBox(height: JpSpace.sm),

@@ -52,7 +52,21 @@ List<Tone> recipeFor(Sfx sound) {
   const c6 = 1046.50;
 
   return switch (sound) {
-    Sfx.tap => const [Tone(hz: g5, milliseconds: 40, volume: 0.75)],
+    // 110ms, not 40.
+    //
+    // Forty milliseconds is shorter than a camera shutter click. The emulator
+    // log confirmed the platform delivering exactly 1764 frames — the whole
+    // sound — for a real tile move, so the pipeline was working perfectly and
+    // still produced nothing anyone would call audio. Most games fire only this
+    // one sound during play, so if the move sound is imperceptible the app is
+    // silent in practice however healthy the plumbing.
+    //
+    // Two tones a fifth apart rather than one: a single pure tone at this length
+    // reads as a beep, while a tiny interval reads as a click with pitch to it.
+    Sfx.tap => const [
+        Tone(hz: g5, milliseconds: 45, volume: 0.80),
+        Tone(hz: c6, milliseconds: 65, volume: 0.70),
+      ],
     Sfx.gain => const [
         Tone(hz: e5, milliseconds: 55, volume: 0.90),
         Tone(hz: a5, milliseconds: 75, volume: 0.88),
