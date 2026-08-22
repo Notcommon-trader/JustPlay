@@ -15,6 +15,16 @@ import 'first_play_coach.dart';
 /// was something to watch rather than something to do. Pointing at the board the
 /// player is about to touch is the whole difference.
 abstract final class CoachMoves {
+  static const List<CoachMove> cascade = [
+    CoachMove(
+      from: Offset(0.35, 0.5),
+      to: Offset(0.5, 0.5),
+      text: 'Swap two touching tiles',
+    ),
+    CoachMove(from: Offset(0.5, 0.4), text: 'Line up three of a colour'),
+    CoachMove(from: Offset(0.5, 0.25), text: 'Chains pay more each link'),
+  ];
+
   static const List<CoachMove> sudoku = [
     CoachMove(from: Offset(0.5, 0.42), text: 'Tap a square'),
     CoachMove(from: Offset(0.28, 0.93), text: 'Then tap a number'),

@@ -17,6 +17,14 @@ GameDefinition definitionFor(Stage stage, {int attempt = 0}) {
   final d = stage.difficulty;
 
   return switch (stage.game) {
+    // Bigger boards are *harder* here: matches sit further apart, so chains fire
+    // less often. The difficulty knob is really a cascade-frequency knob.
+    StageGame.cascade => CascadeDefinition(
+        columns: d <= 2 ? 6 : 7,
+        rows: d <= 2 ? 7 : 8,
+        sizeName: d <= 2 ? 'small' : 'standard',
+        seed: seed,
+      ),
     StageGame.game2048 => Game2048Definition(
         // Smaller boards are harder, not easier: less room to manoeuvre. So the
         // curve runs the other way here than everywhere else.
@@ -70,6 +78,7 @@ GameDefinition definitionFor(Stage stage, {int attempt = 0}) {
 /// must not depend on which games the *catalogue* happens to list, or removing a
 /// game from the home grid would silently break the ladder.
 int stageColourValue(StageGame game) => switch (game) {
+      StageGame.cascade => 0xFF00BFA5,
       StageGame.game2048 => 0xFFF57C00,
       StageGame.slidingPuzzle => 0xFF00897B,
       StageGame.memoryMatch => 0xFFD81B60,
@@ -83,6 +92,7 @@ int stageColourValue(StageGame game) => switch (game) {
 
 /// The game's name as a player would read it.
 String stageGameName(StageGame game) => switch (game) {
+      StageGame.cascade => 'Cascade',
       StageGame.game2048 => '2048',
       StageGame.slidingPuzzle => 'Sliding Puzzle',
       StageGame.memoryMatch => 'Memory Match',

@@ -5,6 +5,8 @@
 /// copy-paste.
 library;
 
+export 'src/cascade/cascade_definition.dart';
+export 'src/cascade/cascade_view.dart';
 export 'src/dots_and_boxes/dots_and_boxes_definition.dart';
 export 'src/dots_and_boxes/dots_and_boxes_view.dart';
 export 'src/game_2048/board_2048_view.dart';

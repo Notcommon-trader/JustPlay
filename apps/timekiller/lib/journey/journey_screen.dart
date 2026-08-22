@@ -186,10 +186,16 @@ class _JourneyScreenState extends State<JourneyScreen> {
         body: SafeArea(
           child: Column(
             children: [
-              _StageHeader(
-                stage: _stage,
-                colour: colour,
-                onQuit: () => Navigator.of(context).maybePop(),
+              // Rebuilt on every session change, so the running total in the
+              // header tracks the board rather than being set once and forgotten.
+              ListenableBuilder(
+                listenable: session,
+                builder: (context, _) => _StageHeader(
+                  stage: _stage,
+                  colour: colour,
+                  state: session.state,
+                  onQuit: () => Navigator.of(context).maybePop(),
+                ),
               ),
               Expanded(
                 child: Stack(
@@ -230,11 +236,13 @@ class _StageHeader extends StatelessWidget {
   const _StageHeader({
     required this.stage,
     required this.colour,
+    required this.state,
     required this.onQuit,
   });
 
   final Stage stage;
   final Color colour;
+  final GameSessionState state;
   final VoidCallback onQuit;
 
   @override
@@ -269,13 +277,43 @@ class _StageHeader extends StatelessWidget {
                 ),
                 // The objective, in the largest type on the header. A player who
                 // does not know what they are being asked cannot be trying.
-                Text(
-                  stage.goal.describe,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: JpTextSize.title,
-                    fontWeight: FontWeight.w700,
-                    height: 1.15,
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        stage.goal.describe,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: JpTextSize.title,
+                          fontWeight: FontWeight.w700,
+                          height: 1.15,
+                        ),
+                      ),
+                    ),
+                    // The running total. A target announced once and never
+                    // mentioned again leaves the player unable to tell whether
+                    // they are nearly there or nowhere near — and being close is
+                    // most of the reason to keep going.
+                    Text(
+                      stage.goal.progress(state),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: JpTextSize.label,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: JpSpace.xs),
+                ClipRRect(
+                  borderRadius: JpRadius.full,
+                  child: LinearProgressIndicator(
+                    value: stage.goal.fraction(state),
+                    minHeight: 5,
+                    backgroundColor: Colors.white24,
+                    valueColor: const AlwaysStoppedAnimation(Colors.white),
                   ),
                 ),
               ],

@@ -8,6 +8,7 @@ import '../session/game_session_state.dart';
 /// package: `jp_core` stays pure Dart, so the whole pacing model is testable
 /// without a widget tree. The app maps these onto real definitions.
 enum StageGame {
+  cascade,
   game2048,
   slidingPuzzle,
   memoryMatch,
@@ -21,6 +22,7 @@ enum StageGame {
   /// Roughly how long one stage of this game runs, used to keep the ladder
   /// inside the one-to-three minute band.
   Duration get typicalLength => switch (this) {
+        StageGame.cascade => const Duration(seconds: 90),
         StageGame.reaction => const Duration(seconds: 45),
         StageGame.game2048 => const Duration(seconds: 90),
         StageGame.slidingPuzzle => const Duration(seconds: 90),
@@ -57,6 +59,18 @@ sealed class StageGoal {
 
   /// Whether a finished session satisfied this goal.
   bool isMet(GameSessionState state);
+
+  /// Where the player currently stands, as "340 / 600".
+  ///
+  /// A target with no running total is barely a goal: the header announced
+  /// "Score 600" and then never mentioned it again, so a player had no idea
+  /// whether they were nearly there or nowhere near. Knowing you are close is
+  /// most of the reason to keep going.
+  String progress(GameSessionState state);
+
+  /// 0–1, for a progress bar. Clamped, because overshooting a target should
+  /// fill the bar rather than overflow it.
+  double fraction(GameSessionState state);
 }
 
 /// Reach a score.
@@ -70,6 +84,13 @@ class ReachScore extends StageGoal {
 
   @override
   bool isMet(GameSessionState state) => state.score >= target;
+
+  @override
+  String progress(GameSessionState state) => '${state.score} / $target';
+
+  @override
+  double fraction(GameSessionState state) =>
+      (state.score / target).clamp(0.0, 1.0);
 }
 
 /// Win, however long it takes.
@@ -81,6 +102,13 @@ class JustWin extends StageGoal {
 
   @override
   bool isMet(GameSessionState state) => state.outcome == GameOutcome.won;
+
+  // Nothing meaningful to count: a board is finished or it is not.
+  @override
+  String progress(GameSessionState state) => isMet(state) ? 'done' : '';
+
+  @override
+  double fraction(GameSessionState state) => isMet(state) ? 1 : 0;
 }
 
 /// Win inside a time limit.
@@ -95,6 +123,18 @@ class WinWithin extends StageGoal {
   @override
   bool isMet(GameSessionState state) =>
       state.outcome == GameOutcome.won && state.elapsed <= limit;
+
+  // Counts down, because the pressure is the time left rather than the time
+  // spent.
+  @override
+  String progress(GameSessionState state) {
+    final left = limit - state.elapsed;
+    return left.isNegative ? 'out of time' : '${left.inSeconds}s left';
+  }
+
+  @override
+  double fraction(GameSessionState state) =>
+      (state.elapsed.inMilliseconds / limit.inMilliseconds).clamp(0.0, 1.0);
 }
 
 /// Win without spending more than [maxMoves].
@@ -109,6 +149,14 @@ class WinInMoves extends StageGoal {
   @override
   bool isMet(GameSessionState state) =>
       state.outcome == GameOutcome.won && state.moves <= maxMoves;
+
+  @override
+  String progress(GameSessionState state) =>
+      '${state.moves} / $maxMoves moves';
+
+  @override
+  double fraction(GameSessionState state) =>
+      (state.moves / maxMoves).clamp(0.0, 1.0);
 }
 
 /// Make progress without necessarily finishing.
@@ -130,6 +178,13 @@ class MakeProgress extends StageGoal {
   @override
   bool isMet(GameSessionState state) =>
       state.moves >= moves && state.outcome != GameOutcome.lost;
+
+  @override
+  String progress(GameSessionState state) => '${state.moves} / $moves';
+
+  @override
+  double fraction(GameSessionState state) =>
+      (state.moves / moves).clamp(0.0, 1.0);
 }
 
 /// One rung of the ladder.
@@ -198,7 +253,15 @@ abstract final class Journey {
     // is the opposite of variety, and only reading the printed ladder showed it.
     // All four here explain themselves in one glance, which is what an opening
     // pool has to do.
+    // Cascade opens, and is the first thing a new player meets.
+    //
+    // It is the only game here with chain reactions — a payout you did not plan
+    // — and that surprise is what the rest of the catalogue structurally cannot
+    // provide. Holding it back behind an unlock would mean the opening stages
+    // are all deliberate puzzles, which is precisely the run that got described
+    // as boring.
     const opening = [
+      StageGame.cascade,
       StageGame.game2048,
       StageGame.wordSearch,
       StageGame.memoryMatch,
@@ -264,6 +327,15 @@ abstract final class Journey {
   static final List<StageGame> _games = [];
 
   static StageGame _gameFor(int number) {
+    // Stage 1 is always Cascade, not whatever the shuffle produces.
+    //
+    // The first stage is the only one every player is guaranteed to see, and it
+    // decides whether there is a second. Cascade is the one game here that pays
+    // out in chains the player did not plan; opening on a deliberate puzzle
+    // instead spends that moment on the exact impression this whole redesign was
+    // trying to escape.
+    if (number == 1) return StageGame.cascade;
+
     while (_games.length < number) {
       final n = _games.length + 1;
       final rng = Random(0x5747 ^ n);
@@ -284,6 +356,11 @@ abstract final class Journey {
       // Never the same game three stages running. Rotation is what stops one
       // mechanic wearing out over a long sitting, and it is the whole reason
       // nine games is an asset here rather than a scattered menu.
+      if (n == 1) {
+        _games.add(StageGame.cascade);
+        continue;
+      }
+
       final recent = <StageGame>{
         if (_games.isNotEmpty) _games[_games.length - 1],
         if (_games.length > 1) _games[_games.length - 2],
@@ -318,6 +395,11 @@ abstract final class Journey {
   /// a ladder feel like a treadmill, and the variation costs nothing.
   static StageGoal _goalFor(StageGame game, int difficulty, Random rng) {
     switch (game) {
+      case StageGame.cascade:
+        // A score target rather than a move limit: the point is to chase chains,
+        // and counting moves would push the player toward safe single matches.
+        return ReachScore(600 + difficulty * 400);
+
       case StageGame.game2048:
         // 64, 128, 256… the tile a player is chasing anyway, so no jitter here:
         // a target that is not a power of two reads as a mistake.

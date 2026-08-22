@@ -86,6 +86,43 @@ class CatalogueEntry {
 /// What ships in this app: ten games, each with its own levels.
 const List<CatalogueEntry> appCatalogue = [
   CatalogueEntry(
+    name: 'Cascade',
+    tagline: 'Match three, then watch it chain',
+    icon: Icons.auto_awesome,
+    colour: Color(0xFF00BFA5),
+    coachMoves: CoachMoves.cascade,
+    howToPlay: [
+      HowToStep(
+        icon: Icons.swap_horiz,
+        text: 'Swap two touching tiles to line up three of a colour.',
+      ),
+      HowToStep(
+        icon: Icons.auto_awesome,
+        text: 'They clear, everything above drops — and often matches again.',
+      ),
+      HowToStep(
+        icon: Icons.trending_up,
+        text: 'Each link of a chain is worth more than the last.',
+      ),
+      HowToStep(
+        icon: Icons.block,
+        text: 'A swap that matches nothing is refused, so nothing is wasted.',
+      ),
+    ],
+    levels: [
+      GameLevel(
+        label: 'Small',
+        detail: 'Six by seven — matches sit closer, so chains fire more often',
+        definition: CascadeDefinition.small,
+      ),
+      GameLevel(
+        label: 'Standard',
+        detail: 'Seven by eight',
+        definition: CascadeDefinition(),
+      ),
+    ],
+  ),
+  CatalogueEntry(
     name: 'Sudoku',
     tagline: 'Fill the grid, one to nine',
     icon: Icons.grid_on,

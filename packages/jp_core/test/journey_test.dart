@@ -140,12 +140,15 @@ void main() {
     });
 
     test('opens with a small pool and widens', () {
-      // Meeting nine mechanics in the first ten minutes is how a player learns
-      // none of them. Four rather than three, because a pool of three with a
-      // no-repeat-within-three rule leaves exactly one legal choice and the
-      // "random" opening becomes a fixed cycle.
-      expect(Journey.availableAt(1).length, 4);
-      expect(Journey.availableAt(40).length, greaterThan(4));
+      // Meeting every mechanic in the first ten minutes is how a player learns
+      // none of them — but the pool cannot be so small that the no-repeat rule
+      // leaves one legal choice and the "random" opening becomes a fixed cycle.
+      //
+      // Cascade is in the opening deliberately: it is the only game with chain
+      // reactions, and holding it back would make the first stages entirely
+      // deliberate puzzles.
+      expect(Journey.availableAt(1).length, 5);
+      expect(Journey.availableAt(40).length, greaterThan(5));
       expect(Journey.availableAt(100).length, StageGame.values.length);
     });
 

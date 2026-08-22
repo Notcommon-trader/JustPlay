@@ -5,6 +5,7 @@
 /// let the logic outlive a change of UI framework.
 library;
 
+export 'src/games/cascade/cascade_board.dart';
 export 'src/games/dots_and_boxes/dots_and_boxes.dart';
 export 'src/journey/journey.dart';
 export 'src/games/game_2048/board_2048.dart';
